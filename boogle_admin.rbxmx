@@ -86,20 +86,21 @@ function getLength(t)
 	return i
 end
 
+local HelpLists = {}
+local KnownCommands = {}
 
-for _, Category: Folder in pairs(script.Parent.Commands:GetChildren()) do
-	LoadedCommandsWCategory[Category.Name] = {}
-	for _, Module: ModuleScript in pairs(Category:GetChildren()) do
-		local Loaded = require(Module)
+for _, Category: ModuleScript in pairs(script.Parent.Commands:GetChildren()) do
+	LoadedCommandsWCategory[Category.Name] = require(Category)
+	for K, Loaded: table in pairs(LoadedCommandsWCategory[Category.Name]) do
+		Loaded.Name = K
 		Loaded.Category = Category.Name
 		
-		LoadedCommandsWCategory[Category.Name][Module.Name] = Loaded
-		LoadedCommands[Module.Name] = Loaded
+		
+		LoadedCommands[K] = Loaded
 	end
 end
 
-local HelpLists = {}
-local KnownCommands = {}
+
 for AcessLevel, _ in pairs(Config.Permissions) do
 	local Helplist = '\n'
 	KnownCommands[AcessLevel] = {}
@@ -114,6 +115,7 @@ for AcessLevel, _ in pairs(Config.Permissions) do
 						table.insert(KnownCommands[AcessLevel],{v,LoadedCommands[Module.Name].Arguments})
 					end
 				end
+				
 				table.insert(KnownCommands[AcessLevel],{LoadedCommands[Module.Name].Name,LoadedCommands[Module.Name].Arguments})
 				added += 1
 				local S = ('-> %s%s '):format(Config.Prefix,LoadedCommands[Module.Name].Name)
@@ -298,426 +300,1670 @@ end]]></ProtectedString>
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="Folder" referent="RBX9581BD4EC4ED41C6BC32E4D24CEF751C">
+				<Item class="ModuleScript" referent="RBX098F0CC5EC044A948D70D9278CF2BA7A">
 					<Properties>
 						<BinaryString name="AttributesSerialize"></BinaryString>
-						<string name="Name">Fun</string>
+						<Content name="LinkedSource"><null></null></Content>
+						<string name="Name">Deadly</string>
+						<string name="ScriptGuid">{5713E187-A0CC-4F66-A3A6-26D7BCB51A7F}</string>
+						<ProtectedString name="Source"><![CDATA[return {
+	['damage'] = {
+		
+		Arguments = {'Player', 'Amount'},
+		PermLevel = shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			Character.Humanoid:TakeDamage(Arguments[2])
+
+		end
+	},
+	['explode'] = {
+		
+		Arguments = {'Player', 'Radius'},
+		PermLevel = shared["__BoogleAdmin"].HeadAdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			local explosion = Instance.new('Explosion')
+			explosion.ExplosionType = Enum.ExplosionType.NoCraters
+			explosion.BlastRadius = Arguments[2] or 25
+			explosion.BlastPressure = 100000
+			explosion.DestroyJointRadiusPercent = 0
+			local Hit = {}
+			explosion.Hit:Connect(function(P,D)
+				if P.Parent:FindFirstChild('Humanoid') and not Hit[P.Parent] then
+					Hit[P.Parent] = true
+
+					P.Parent.Humanoid:TakeDamage(((25-D) / 25) * 150)
+				end
+			end)
+
+			explosion.Position = Character.PrimaryPart.Position
+			explosion.Parent = workspace
+			game.Debris:AddItem(explosion,3)
+		end
+	},
+	['fling'] = {
+		
+		Arguments = {'Player'},
+		PermLevel = shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Character = Arguments[1][1].Character
+			if not Character then return end
+			local Direction = if math.random(1,2) == 1 then 1 else -1 
+			local Power = math.random(400,500)
+
+
+			Character.PrimaryPart:ApplyAngularImpulse(Vector3.new(Direction,Direction,Direction) * Power)
+
+			local BV = Instance.new('BodyVelocity', Character.PrimaryPart)
+			BV.MaxForce = Vector3.new(math.huge,math.huge,math.huge) 
+			BV.Velocity = (Vector3.new(Direction,1,Direction) * Power)
+			game.Debris:AddItem(BV,1)
+
+		end
+	},
+	['kill'] = {
+		
+		Arguments = {'Player'},
+		PermLevel = shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			Character.Humanoid.Health = 0
+
+		end
+	},
+	['lightsaber'] = {
+		
+		OtherNames = {'saber'},
+		Arguments = {'Player', 'Color', 'Lightsaber Type'},
+		PermLevel = shared["__BoogleAdmin"].HeadAdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			if not Player then return end
+
+
+			local Gear = script[Arguments[3] or 'default']:Clone()
+
+			pcall(function()
+				Gear.Blade.Color = Arguments[2]
+				for _, L: Light in pairs(Gear.Blade:GetChildren()) do
+					if L:IsA('Light') then
+						L.Color = Arguments[2]
+					end
+				end
+
+				Gear.SideBlade1.Color = Arguments[2]
+				Gear.SideBlade2.Color = Arguments[2]
+
+			end)
+
+			Gear.Parent = Player.Backpack
+
+		end
+	},
+	['smite'] = {
+		
+		Arguments = {'Player'},
+		PermLevel = shared["__BoogleAdmin"].HeadAdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+			local Model = script.SmiteModel:Clone()
+			game.Debris:AddItem(Model,10)
+
+			Model.Parent = workspace
+			Model:SetPrimaryPartCFrame(Character:GetPrimaryPartCFrame())
+			Model.PrimaryPart.Rumble:Play()
+			wait(2.6)
+
+			Model.PrimaryPart.Zap:Play()
+			wait(.7)
+			Model.PrimaryPart.Rumble:Stop()
+
+			local Bolt = script.Bolt:Clone()
+			Bolt.Parent = Model
+			Bolt.CFrame = CFrame.new(Model.Root.Position + Vector3.new(0,15,0),Character.PrimaryPart.Position)
+
+			game:GetService('TweenService'):Create(Bolt,TweenInfo.new(0.25,Enum.EasingStyle.Linear,Enum.EasingDirection.InOut), {Position = Character.PrimaryPart.Position}):Play()
+			wait(.25)
+			Bolt:Destroy()
+
+			Character.Humanoid.Health = 0
+
+			for _, v in pairs(Character:GetChildren()) do
+				if v:IsA("BasePart") then
+					local s = Instance.new('Smoke', v)
+					s.Size = .05
+					s.TimeScale = 0.25
+
+					s.RiseVelocity = 2
+				end
+			end
+
+
+			wait(3)
+			Model:Destroy()
+
+		end
+	},
+	['sword'] = {
+		
+		Arguments = {'Player'},
+		PermLevel = shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			if not Player then return end
+
+			if Player.Backpack:FindFirstChild("ClassicSword") then return end
+
+			local Gear = script["ClassicSword"]:Clone()
+			Gear.Parent = Player.Backpack
+
+		end
+	}
+	
+	
+}]]></ProtectedString>
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="ModuleScript" referent="RBX087F0A9B03324C67855D21932D1FA887">
+					<Item class="Model" referent="RBX63329A4041EF410FB63EC99E6E18F7DF">
 						<Properties>
 							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">smoke</string>
-							<string name="ScriptGuid">{608203B7-65FC-4885-9134-0C602BFB3BE6}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player', 'Size', 'Color'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player and not Character.Head:FindFirstChildOfClass('Fire') then return end
-		
-		
-		local Smoke = Instance.new('Smoke', Character.Head)
-		Smoke.Size = Arguments[2] or 1
-		
-		pcall(function()
-			Smoke.Color = Arguments[3]
-		end)
-		
-		
-	end
-}]]></ProtectedString>
+							<token name="LevelOfDetail">0</token>
+							<CoordinateFrame name="ModelMeshCFrame">
+								<X>0</X>
+								<Y>0</Y>
+								<Z>0</Z>
+								<R00>1</R00>
+								<R01>0</R01>
+								<R02>0</R02>
+								<R10>0</R10>
+								<R11>1</R11>
+								<R12>0</R12>
+								<R20>0</R20>
+								<R21>0</R21>
+								<R22>1</R22>
+							</CoordinateFrame>
+							<SharedString name="ModelMeshData">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+							<Vector3 name="ModelMeshSize">
+								<X>0</X>
+								<Y>0</Y>
+								<Z>0</Z>
+							</Vector3>
+							<string name="Name">SmiteModel</string>
+							<bool name="NeedsPivotMigration">false</bool>
+							<Ref name="PrimaryPart">RBX330F0CE8AE3846E38EEB4E09D6E76054</Ref>
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
+							<OptionalCoordinateFrame name="WorldPivotData">
+								<CFrame>
+									<X>-86.7304688</X>
+									<Y>0.5</Y>
+									<Z>33.1247559</Z>
+									<R00>1</R00>
+									<R01>0</R01>
+									<R02>0</R02>
+									<R10>0</R10>
+									<R11>1</R11>
+									<R12>0</R12>
+									<R20>0</R20>
+									<R21>0</R21>
+									<R22>1</R22>
+								</CFrame>
+							</OptionalCoordinateFrame>
 						</Properties>
+						<Item class="MeshPart" referent="RBX9328A8D7072D430187FC84816F8983DD">
+							<Properties>
+								<bool name="Anchored">true</bool>
+								<BinaryString name="AttributesSerialize"></BinaryString>
+								<float name="BackParamA">-0.5</float>
+								<float name="BackParamB">0.5</float>
+								<token name="BackSurface">0</token>
+								<token name="BackSurfaceInput">0</token>
+								<float name="BottomParamA">-0.5</float>
+								<float name="BottomParamB">0.5</float>
+								<token name="BottomSurface">0</token>
+								<token name="BottomSurfaceInput">0</token>
+								<CoordinateFrame name="CFrame">
+									<X>-86.7304688</X>
+									<Y>23.8804054</Y>
+									<Z>33.1247559</Z>
+									<R00>1</R00>
+									<R01>0</R01>
+									<R02>0</R02>
+									<R10>0</R10>
+									<R11>1</R11>
+									<R12>0</R12>
+									<R20>0</R20>
+									<R21>0</R21>
+									<R22>1</R22>
+								</CoordinateFrame>
+								<bool name="CanCollide">false</bool>
+								<bool name="CanQuery">true</bool>
+								<bool name="CanTouch">true</bool>
+								<bool name="CastShadow">true</bool>
+								<int name="CollisionGroupId">0</int>
+								<Color3uint8 name="Color3uint8">4279308561</Color3uint8>
+								<PhysicalProperties name="CustomPhysicalProperties">
+									<CustomPhysics>false</CustomPhysics>
+								</PhysicalProperties>
+								<bool name="DoubleSided">true</bool>
+								<float name="FrontParamA">-0.5</float>
+								<float name="FrontParamB">0.5</float>
+								<token name="FrontSurface">0</token>
+								<token name="FrontSurfaceInput">0</token>
+								<bool name="HasJointOffset">false</bool>
+								<bool name="HasSkinnedMesh">false</bool>
+								<Vector3 name="InitialSize">
+									<X>1.34701109</X>
+									<Y>1.024441</Y>
+									<Z>1.70995808</Z>
+								</Vector3>
+								<Vector3 name="JointOffset">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>0</Z>
+								</Vector3>
+								<BinaryString name="LODData"></BinaryString>
+								<float name="LeftParamA">-0.5</float>
+								<float name="LeftParamB">0.5</float>
+								<token name="LeftSurface">0</token>
+								<token name="LeftSurfaceInput">0</token>
+								<bool name="Locked">false</bool>
+								<bool name="Massless">false</bool>
+								<token name="Material">288</token>
+								<string name="MaterialVariantSerialized"></string>
+								<Content name="MeshID"><url>rbxassetid://7326248280</url></Content>
+								<Content name="MeshId"><url>rbxassetid://7326248280</url></Content>
+								<string name="Name">Cloud</string>
+								<SharedString name="PhysicalConfigData">+qv2o0HSW+htH+ALwYQpiw==</SharedString>
+								<BinaryString name="PhysicsData"></BinaryString>
+								<CoordinateFrame name="PivotOffset">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>0</Z>
+									<R00>1</R00>
+									<R01>0</R01>
+									<R02>0</R02>
+									<R10>0</R10>
+									<R11>1</R11>
+									<R12>0</R12>
+									<R20>0</R20>
+									<R21>0</R21>
+									<R22>1</R22>
+								</CoordinateFrame>
+								<float name="Reflectance">0</float>
+								<token name="RenderFidelity">0</token>
+								<float name="RightParamA">-0.5</float>
+								<float name="RightParamB">0.5</float>
+								<token name="RightSurface">0</token>
+								<token name="RightSurfaceInput">0</token>
+								<int name="RootPriority">0</int>
+								<Vector3 name="RotVelocity">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>0</Z>
+								</Vector3>
+								<int64 name="SourceAssetId">7326248362</int64>
+								<BinaryString name="Tags"></BinaryString>
+								<Content name="TextureID"><null></null></Content>
+								<float name="TopParamA">-0.5</float>
+								<float name="TopParamB">0.5</float>
+								<token name="TopSurface">0</token>
+								<token name="TopSurfaceInput">0</token>
+								<float name="Transparency">0</float>
+								<Vector3 name="Velocity">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>0</Z>
+								</Vector3>
+								<Vector3 name="size">
+									<X>19.8772545</X>
+									<Y>15.1154461</Y>
+									<Z>25.2331028</Z>
+								</Vector3>
+							</Properties>
+						</Item>
+						<Item class="Part" referent="RBX330F0CE8AE3846E38EEB4E09D6E76054">
+							<Properties>
+								<bool name="Anchored">true</bool>
+								<BinaryString name="AttributesSerialize"></BinaryString>
+								<float name="BackParamA">-0.5</float>
+								<float name="BackParamB">0.5</float>
+								<token name="BackSurface">0</token>
+								<token name="BackSurfaceInput">0</token>
+								<float name="BottomParamA">-0.5</float>
+								<float name="BottomParamB">0.5</float>
+								<token name="BottomSurface">0</token>
+								<token name="BottomSurfaceInput">0</token>
+								<CoordinateFrame name="CFrame">
+									<X>-86.7304688</X>
+									<Y>0.5</Y>
+									<Z>33.1247559</Z>
+									<R00>1</R00>
+									<R01>0</R01>
+									<R02>0</R02>
+									<R10>0</R10>
+									<R11>1</R11>
+									<R12>0</R12>
+									<R20>0</R20>
+									<R21>0</R21>
+									<R22>1</R22>
+								</CoordinateFrame>
+								<bool name="CanCollide">false</bool>
+								<bool name="CanQuery">true</bool>
+								<bool name="CanTouch">true</bool>
+								<bool name="CastShadow">true</bool>
+								<int name="CollisionGroupId">0</int>
+								<Color3uint8 name="Color3uint8">4284702562</Color3uint8>
+								<PhysicalProperties name="CustomPhysicalProperties">
+									<CustomPhysics>false</CustomPhysics>
+								</PhysicalProperties>
+								<float name="FrontParamA">-0.5</float>
+								<float name="FrontParamB">0.5</float>
+								<token name="FrontSurface">0</token>
+								<token name="FrontSurfaceInput">0</token>
+								<float name="LeftParamA">-0.5</float>
+								<float name="LeftParamB">0.5</float>
+								<token name="LeftSurface">0</token>
+								<token name="LeftSurfaceInput">0</token>
+								<bool name="Locked">false</bool>
+								<bool name="Massless">false</bool>
+								<token name="Material">272</token>
+								<string name="MaterialVariantSerialized"></string>
+								<string name="Name">Root</string>
+								<CoordinateFrame name="PivotOffset">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>0</Z>
+									<R00>1</R00>
+									<R01>0</R01>
+									<R02>0</R02>
+									<R10>0</R10>
+									<R11>1</R11>
+									<R12>0</R12>
+									<R20>0</R20>
+									<R21>0</R21>
+									<R22>1</R22>
+								</CoordinateFrame>
+								<float name="Reflectance">0</float>
+								<float name="RightParamA">-0.5</float>
+								<float name="RightParamB">0.5</float>
+								<token name="RightSurface">0</token>
+								<token name="RightSurfaceInput">0</token>
+								<int name="RootPriority">0</int>
+								<Vector3 name="RotVelocity">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>0</Z>
+								</Vector3>
+								<int64 name="SourceAssetId">-1</int64>
+								<BinaryString name="Tags"></BinaryString>
+								<float name="TopParamA">-0.5</float>
+								<float name="TopParamB">0.5</float>
+								<token name="TopSurface">0</token>
+								<token name="TopSurfaceInput">0</token>
+								<float name="Transparency">1</float>
+								<Vector3 name="Velocity">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>0</Z>
+								</Vector3>
+								<token name="formFactorRaw">1</token>
+								<token name="shape">1</token>
+								<Vector3 name="size">
+									<X>1</X>
+									<Y>1</Y>
+									<Z>1</Z>
+								</Vector3>
+							</Properties>
+							<Item class="Sound" referent="RBX4E50CF1DF6904C0F946B726DCC86EF3A">
+								<Properties>
+									<BinaryString name="AttributesSerialize"></BinaryString>
+									<float name="EmitterSize">100</float>
+									<bool name="Looped">false</bool>
+									<string name="Name">Rumble</string>
+									<bool name="PlayOnRemove">false</bool>
+									<float name="PlaybackSpeed">1</float>
+									<bool name="Playing">false</bool>
+									<token name="RollOffMode">0</token>
+									<Ref name="SoundGroup">null</Ref>
+									<Content name="SoundId"><url>rbxassetid://9120021237</url></Content>
+									<int64 name="SourceAssetId">9120021237</int64>
+									<BinaryString name="Tags"></BinaryString>
+									<double name="TimePosition">0</double>
+									<float name="Volume">1</float>
+									<float name="xmlRead_MaxDistance_3">10000</float>
+								</Properties>
+							</Item>
+							<Item class="Sound" referent="RBXCC9ABF5D978B45CF9E93D3253EB6E7F2">
+								<Properties>
+									<BinaryString name="AttributesSerialize"></BinaryString>
+									<float name="EmitterSize">100</float>
+									<bool name="Looped">false</bool>
+									<string name="Name">Zap</string>
+									<bool name="PlayOnRemove">false</bool>
+									<float name="PlaybackSpeed">1</float>
+									<bool name="Playing">false</bool>
+									<token name="RollOffMode">0</token>
+									<Ref name="SoundGroup">null</Ref>
+									<Content name="SoundId"><url>rbxassetid://9120020523</url></Content>
+									<int64 name="SourceAssetId">9120020523</int64>
+									<BinaryString name="Tags"></BinaryString>
+									<double name="TimePosition">0</double>
+									<float name="Volume">2</float>
+									<float name="xmlRead_MaxDistance_3">10000</float>
+								</Properties>
+							</Item>
+						</Item>
+						<Item class="MeshPart" referent="RBX926FE2F573E243F988A0FEE8222490F4">
+							<Properties>
+								<bool name="Anchored">true</bool>
+								<BinaryString name="AttributesSerialize"></BinaryString>
+								<float name="BackParamA">-0.5</float>
+								<float name="BackParamB">0.5</float>
+								<token name="BackSurface">0</token>
+								<token name="BackSurfaceInput">0</token>
+								<float name="BottomParamA">-0.5</float>
+								<float name="BottomParamB">0.5</float>
+								<token name="BottomSurface">0</token>
+								<token name="BottomSurfaceInput">0</token>
+								<CoordinateFrame name="CFrame">
+									<X>-79.4632263</X>
+									<Y>23.8804054</Y>
+									<Z>33.1247559</Z>
+									<R00>-0.707106829</R00>
+									<R01>0</R01>
+									<R02>0.707106709</R02>
+									<R10>0</R10>
+									<R11>1</R11>
+									<R12>0</R12>
+									<R20>-0.707106709</R20>
+									<R21>0</R21>
+									<R22>-0.707106829</R22>
+								</CoordinateFrame>
+								<bool name="CanCollide">false</bool>
+								<bool name="CanQuery">true</bool>
+								<bool name="CanTouch">true</bool>
+								<bool name="CastShadow">true</bool>
+								<int name="CollisionGroupId">0</int>
+								<Color3uint8 name="Color3uint8">4279308561</Color3uint8>
+								<PhysicalProperties name="CustomPhysicalProperties">
+									<CustomPhysics>false</CustomPhysics>
+								</PhysicalProperties>
+								<bool name="DoubleSided">true</bool>
+								<float name="FrontParamA">-0.5</float>
+								<float name="FrontParamB">0.5</float>
+								<token name="FrontSurface">0</token>
+								<token name="FrontSurfaceInput">0</token>
+								<bool name="HasJointOffset">false</bool>
+								<bool name="HasSkinnedMesh">false</bool>
+								<Vector3 name="InitialSize">
+									<X>1.34701109</X>
+									<Y>1.024441</Y>
+									<Z>1.70995808</Z>
+								</Vector3>
+								<Vector3 name="JointOffset">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>0</Z>
+								</Vector3>
+								<BinaryString name="LODData"></BinaryString>
+								<float name="LeftParamA">-0.5</float>
+								<float name="LeftParamB">0.5</float>
+								<token name="LeftSurface">0</token>
+								<token name="LeftSurfaceInput">0</token>
+								<bool name="Locked">false</bool>
+								<bool name="Massless">false</bool>
+								<token name="Material">288</token>
+								<string name="MaterialVariantSerialized"></string>
+								<Content name="MeshID"><url>rbxassetid://7326248280</url></Content>
+								<Content name="MeshId"><url>rbxassetid://7326248280</url></Content>
+								<string name="Name">Cloud</string>
+								<SharedString name="PhysicalConfigData">+qv2o0HSW+htH+ALwYQpiw==</SharedString>
+								<BinaryString name="PhysicsData"></BinaryString>
+								<CoordinateFrame name="PivotOffset">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>0</Z>
+									<R00>1</R00>
+									<R01>0</R01>
+									<R02>0</R02>
+									<R10>0</R10>
+									<R11>1</R11>
+									<R12>0</R12>
+									<R20>0</R20>
+									<R21>0</R21>
+									<R22>1</R22>
+								</CoordinateFrame>
+								<float name="Reflectance">0</float>
+								<token name="RenderFidelity">0</token>
+								<float name="RightParamA">-0.5</float>
+								<float name="RightParamB">0.5</float>
+								<token name="RightSurface">0</token>
+								<token name="RightSurfaceInput">0</token>
+								<int name="RootPriority">0</int>
+								<Vector3 name="RotVelocity">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>0</Z>
+								</Vector3>
+								<int64 name="SourceAssetId">7326248362</int64>
+								<BinaryString name="Tags"></BinaryString>
+								<Content name="TextureID"><null></null></Content>
+								<float name="TopParamA">-0.5</float>
+								<float name="TopParamB">0.5</float>
+								<token name="TopSurface">0</token>
+								<token name="TopSurfaceInput">0</token>
+								<float name="Transparency">0</float>
+								<Vector3 name="Velocity">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>0</Z>
+								</Vector3>
+								<Vector3 name="size">
+									<X>19.8772545</X>
+									<Y>15.1154461</Y>
+									<Z>25.2331028</Z>
+								</Vector3>
+							</Properties>
+						</Item>
 					</Item>
-					<Item class="ModuleScript" referent="RBXD1744FD3B7EF4C309BB897C54526CA33">
+					<Item class="Part" referent="RBXE3D5E3E9923F4693AD3F85409E71786F">
 						<Properties>
+							<bool name="Anchored">true</bool>
 							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">unsparkles</string>
-							<string name="ScriptGuid">{8CF97A29-4EDD-4843-94E4-372204CA5741}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		pcall(function()
-			Character.Head:FindFirstChildOfClass('Sparkles'):Destroy()
-		end)
-		
-		
-	end
-}]]></ProtectedString>
+							<float name="BackParamA">-0.5</float>
+							<float name="BackParamB">0.5</float>
+							<token name="BackSurface">0</token>
+							<token name="BackSurfaceInput">0</token>
+							<float name="BottomParamA">-0.5</float>
+							<float name="BottomParamB">0.5</float>
+							<token name="BottomSurface">0</token>
+							<token name="BottomSurfaceInput">0</token>
+							<CoordinateFrame name="CFrame">
+								<X>-16.3168945</X>
+								<Y>0.5</Y>
+								<Z>-9.52038574</Z>
+								<R00>1</R00>
+								<R01>0</R01>
+								<R02>0</R02>
+								<R10>0</R10>
+								<R11>1</R11>
+								<R12>0</R12>
+								<R20>0</R20>
+								<R21>0</R21>
+								<R22>1</R22>
+							</CoordinateFrame>
+							<bool name="CanCollide">false</bool>
+							<bool name="CanQuery">true</bool>
+							<bool name="CanTouch">true</bool>
+							<bool name="CastShadow">true</bool>
+							<int name="CollisionGroupId">0</int>
+							<Color3uint8 name="Color3uint8">4288914085</Color3uint8>
+							<PhysicalProperties name="CustomPhysicalProperties">
+								<CustomPhysics>false</CustomPhysics>
+							</PhysicalProperties>
+							<float name="FrontParamA">-0.5</float>
+							<float name="FrontParamB">0.5</float>
+							<token name="FrontSurface">0</token>
+							<token name="FrontSurfaceInput">0</token>
+							<float name="LeftParamA">-0.5</float>
+							<float name="LeftParamB">0.5</float>
+							<token name="LeftSurface">0</token>
+							<token name="LeftSurfaceInput">0</token>
+							<bool name="Locked">false</bool>
+							<bool name="Massless">false</bool>
+							<token name="Material">256</token>
+							<string name="MaterialVariantSerialized"></string>
+							<string name="Name">Bolt</string>
+							<CoordinateFrame name="PivotOffset">
+								<X>0</X>
+								<Y>0</Y>
+								<Z>0</Z>
+								<R00>1</R00>
+								<R01>0</R01>
+								<R02>0</R02>
+								<R10>0</R10>
+								<R11>1</R11>
+								<R12>0</R12>
+								<R20>0</R20>
+								<R21>0</R21>
+								<R22>1</R22>
+							</CoordinateFrame>
+							<float name="Reflectance">0</float>
+							<float name="RightParamA">-0.5</float>
+							<float name="RightParamB">0.5</float>
+							<token name="RightSurface">0</token>
+							<token name="RightSurfaceInput">0</token>
+							<int name="RootPriority">0</int>
+							<Vector3 name="RotVelocity">
+								<X>0</X>
+								<Y>0</Y>
+								<Z>0</Z>
+							</Vector3>
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
+							<float name="TopParamA">-0.5</float>
+							<float name="TopParamB">0.5</float>
+							<token name="TopSurface">0</token>
+							<token name="TopSurfaceInput">0</token>
+							<float name="Transparency">1</float>
+							<Vector3 name="Velocity">
+								<X>0</X>
+								<Y>0</Y>
+								<Z>0</Z>
+							</Vector3>
+							<token name="formFactorRaw">1</token>
+							<token name="shape">1</token>
+							<Vector3 name="size">
+								<X>1</X>
+								<Y>1</Y>
+								<Z>10</Z>
+							</Vector3>
 						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX4D384299A52E428BB2676B5EBA354216">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">unsmoke</string>
-							<string name="ScriptGuid">{1EB6A65B-FD72-436E-889C-39D0C08FC7DC}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		pcall(function()
-			Character.Head:FindFirstChildOfClass('Smoke'):Destroy()
-		end)
-		
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX5CD95AE0166740D2905B570C86C7893A">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">sparkles</string>
-							<string name="ScriptGuid">{C158D98D-18BD-4485-AC18-0EB1282F061C}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player', 'Color'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player and not Character.Head:FindFirstChildOfClass('Fire') then return end
-		
-		
-		local Sparkles = Instance.new('Sparkles', Character.Head)
-		
-		pcall(function()
-			Sparkles.Color = Arguments[2]
-		end)
-		
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX73CD76302389457FB57E5231F279716C">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">unfire</string>
-							<string name="ScriptGuid">{A5396FF0-EA9B-4482-A0E9-478B128FC4C6}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		pcall(function()
-			Character.Head:FindFirstChildOfClass('Fire'):Destroy()
-		end)
-		
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXAB505CB8D92D492CA6796144BF8C35E5">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">fire</string>
-							<string name="ScriptGuid">{93CE3054-7BF5-4E79-A2AC-A59C9847A36C}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player', 'Size', 'Color'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player and not Character.Head:FindFirstChildOfClass('Fire') then return end
-		
-		
-		local Fire = Instance.new('Fire', Character.Head)
-		Fire.Size = Arguments[2] or 9 
-		
-		pcall(function()
-			Fire.Color = Arguments[3]
-			Fire.SecondaryColor = Arguments[3]
-		end)
-		
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX1C362C2A12814B5ABDE6C5F0E3E27F6D">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">gear</string>
-							<string name="ScriptGuid">{09685F77-30FB-4574-93ED-FDC6C94BAED8}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player', 'Gear ID'},
-	PermLevel = shared["__BoogleAdmin"].HeadAdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		if not Player then return end
-		
-		local Gear = game:GetService("InsertService"):LoadAsset(Arguments[2])
-		local Gear = Gear:GetChildren()[1]
-		Gear.Parent = Player.Backpack
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX3F55AAB508AD4217A4AC77F4869DDA1D">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">hat</string>
-							<string name="ScriptGuid">{58929734-C0FE-420B-A874-BA41C6B1D4F2}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player', 'Hat ID'},
-	PermLevel = shared["__BoogleAdmin"].HeadAdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		local Hat = game:GetService("InsertService"):LoadAsset(Arguments[2])
-		local Hat = Hat:GetChildren()[1]
-		Character.Humanoid:AddAccessory(Hat)
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX6C9712FB88E741778B33BDA54E67E42B">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">light</string>
-							<string name="ScriptGuid">{31BF50D1-97B5-4E06-A2CF-D03933A66D8D}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player', 'Size', 'Color', 'Brightness'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player and not Character.Head:FindFirstChildOfClass('PointLight') then return end
-		
-		
-		local PointLight = Instance.new('PointLight', Character.Head)
-		PointLight.Range = Arguments[2] or 8
-		PointLight.Brightness = Arguments[4] or 1
-		
-		pcall(function()
-			PointLight.Color = Arguments[3]
-		end)
-		
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX899837F2803B484F81DFA8A5D76A8271">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">unlight</string>
-							<string name="ScriptGuid">{8814FD5C-4417-41D2-8784-996FB8F18191}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		pcall(function()
-			Character.Head:FindFirstChildOfClass('PointLight'):Destroy()
-		end)
-		
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
+						<Item class="Attachment" referent="RBX3EE4DEAC19924D45A6BB8C693D069E63">
+							<Properties>
+								<BinaryString name="AttributesSerialize"></BinaryString>
+								<CoordinateFrame name="CFrame">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>10</Z>
+									<R00>1</R00>
+									<R01>0</R01>
+									<R02>0</R02>
+									<R10>0</R10>
+									<R11>1</R11>
+									<R12>0</R12>
+									<R20>0</R20>
+									<R21>0</R21>
+									<R22>1</R22>
+								</CoordinateFrame>
+								<string name="Name">Attachment</string>
+								<int64 name="SourceAssetId">-1</int64>
+								<BinaryString name="Tags"></BinaryString>
+								<bool name="Visible">false</bool>
+							</Properties>
+						</Item>
+						<Item class="Beam" referent="RBXB1057EB9BC9448C0A6D2A7C7C85D4AFA">
+							<Properties>
+								<Ref name="Attachment0">RBX3EE4DEAC19924D45A6BB8C693D069E63</Ref>
+								<Ref name="Attachment1">RBX766E8E98444C4EF6AACCB78A1074B85A</Ref>
+								<BinaryString name="AttributesSerialize"></BinaryString>
+								<float name="Brightness">5</float>
+								<ColorSequence name="Color">0 1 1 1 0 1 1 1 1 0 </ColorSequence>
+								<float name="CurveSize0">0</float>
+								<float name="CurveSize1">0</float>
+								<bool name="Enabled">true</bool>
+								<bool name="FaceCamera">true</bool>
+								<float name="LightEmission">1</float>
+								<float name="LightInfluence">0</float>
+								<string name="Name">Beam</string>
+								<int name="Segments">10</int>
+								<int64 name="SourceAssetId">-1</int64>
+								<BinaryString name="Tags"></BinaryString>
+								<Content name="Texture"><url>rbxassetid://6024995614</url></Content>
+								<float name="TextureLength">20</float>
+								<token name="TextureMode">2</token>
+								<float name="TextureSpeed">19</float>
+								<NumberSequence name="Transparency">0 1 0 0.492331 0.390625 0 1 1 0 </NumberSequence>
+								<float name="Width0">15</float>
+								<float name="Width1">15</float>
+								<float name="ZOffset">0</float>
+							</Properties>
+						</Item>
+						<Item class="Attachment" referent="RBX766E8E98444C4EF6AACCB78A1074B85A">
+							<Properties>
+								<BinaryString name="AttributesSerialize"></BinaryString>
+								<CoordinateFrame name="CFrame">
+									<X>0</X>
+									<Y>0</Y>
+									<Z>-10</Z>
+									<R00>1</R00>
+									<R01>0</R01>
+									<R02>0</R02>
+									<R10>0</R10>
+									<R11>1</R11>
+									<R12>0</R12>
+									<R20>0</R20>
+									<R21>0</R21>
+									<R22>1</R22>
+								</CoordinateFrame>
+								<string name="Name">Attachment</string>
+								<int64 name="SourceAssetId">-1</int64>
+								<BinaryString name="Tags"></BinaryString>
+								<bool name="Visible">false</bool>
+							</Properties>
+						</Item>
 					</Item>
 				</Item>
-				<Item class="Folder" referent="RBX6990270CF3CE47C7B6E28F0F64E6E1CE">
+				<Item class="ModuleScript" referent="RBX926A61FF0E1B4525B788EC4F5701665D">
 					<Properties>
 						<BinaryString name="AttributesSerialize"></BinaryString>
-						<string name="Name">Moderation</string>
+						<Content name="LinkedSource"><null></null></Content>
+						<string name="Name">Fun</string>
+						<string name="ScriptGuid">{BFF6DE10-AFBE-4079-B301-35B1138028B4}</string>
+						<ProtectedString name="Source"><![CDATA[return {
+	['fire'] = {
+		Arguments = {'Player', 'Size', 'Color'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player and not Character.Head:FindFirstChildOfClass('Fire') then return end
+
+
+			local Fire = Instance.new('Fire', Character.Head)
+			Fire.Size = Arguments[2] or 9 
+
+			pcall(function()
+				Fire.Color = Arguments[3]
+				Fire.SecondaryColor = Arguments[3]
+			end)
+
+
+		end
+	},
+	['gear'] = {
+		Arguments = {'Player', 'Gear ID'},
+		PermLevel = shared["__BoogleAdmin"].HeadAdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			if not Player then return end
+
+			local Gear = game:GetService("InsertService"):LoadAsset(Arguments[2])
+			local Gear = Gear:GetChildren()[1]
+			Gear.Parent = Player.Backpack
+
+		end
+	},
+	['hat'] = {
+		Arguments = {'Player', 'Hat ID'},
+		PermLevel = shared["__BoogleAdmin"].HeadAdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+			local Hat = game:GetService("InsertService"):LoadAsset(Arguments[2])
+			local Hat = Hat:GetChildren()[1]
+			Character.Humanoid:AddAccessory(Hat)
+
+		end
+	},
+	['light'] = {
+		Arguments = {'Player', 'Size', 'Color', 'Brightness'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player and not Character.Head:FindFirstChildOfClass('PointLight') then return end
+
+
+			local PointLight = Instance.new('PointLight', Character.Head)
+			PointLight.Range = Arguments[2] or 8
+			PointLight.Brightness = Arguments[4] or 1
+
+			pcall(function()
+				PointLight.Color = Arguments[3]
+			end)
+
+
+		end
+	},
+	['smoke'] = {
+		Arguments = {'Player', 'Size', 'Color'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player and not Character.Head:FindFirstChildOfClass('Fire') then return end
+
+
+			local Smoke = Instance.new('Smoke', Character.Head)
+			Smoke.Size = Arguments[2] or 1
+
+			pcall(function()
+				Smoke.Color = Arguments[3]
+			end)
+
+
+		end
+	},
+	['sparkles'] = {
+		Arguments = {'Player', 'Color'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player and not Character.Head:FindFirstChildOfClass('Fire') then return end
+
+
+			local Sparkles = Instance.new('Sparkles', Character.Head)
+
+			pcall(function()
+				Sparkles.Color = Arguments[2]
+			end)
+
+
+		end
+	},
+	['unfire'] = {
+		Arguments = {'Player'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			pcall(function()
+				Character.Head:FindFirstChildOfClass('Fire'):Destroy()
+			end)
+
+
+		end
+	},
+	['unlight'] = {
+		Arguments = {'Player'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			pcall(function()
+				Character.Head:FindFirstChildOfClass('PointLight'):Destroy()
+			end)
+
+
+		end
+	},
+	['unsmoke'] = {
+		Arguments = {'Player'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			pcall(function()
+				Character.Head:FindFirstChildOfClass('Smoke'):Destroy()
+			end)
+
+
+		end
+	},
+	['unsparkles'] = {
+		Arguments = {'Player'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			pcall(function()
+				Character.Head:FindFirstChildOfClass('Sparkles'):Destroy()
+			end)
+
+
+		end
+	}
+}]]></ProtectedString>
 						<int64 name="SourceAssetId">-1</int64>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="ModuleScript" referent="RBXBA22BDCF5532425991F7A24F71403052">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">ban</string>
-							<string name="ScriptGuid">{4E07EAD3-DEA1-4033-8A87-BC3E6629FCAF}</string>
-							<ProtectedString name="Source"><![CDATA[shared["__BoogleAdmin"].Banned = {}
+				</Item>
+				<Item class="ModuleScript" referent="RBXD9431F592E4D4BDC928DDBDB257F16A7">
+					<Properties>
+						<BinaryString name="AttributesSerialize"></BinaryString>
+						<Content name="LinkedSource"><null></null></Content>
+						<string name="Name">Misc</string>
+						<string name="ScriptGuid">{4F92B3D1-E0B1-4589-8801-E33F4AD9B410}</string>
+						<ProtectedString name="Source"><![CDATA[function getAccessRank(ID)
+	for K, v in pairs(shared["__BoogleAdmin"].Config.Permissions) do
+		if table.find(v,ID) then
+			return K
+		end
+	end
+	return -1
+end
+
+local SizedCharacters = {}
+
+function changeRig(Context, Arguments,RigType: Enum.HumanoidRigType)
+	-- also from adonis  https://github.com/Sceleratis/Adonis/blob/7782a751c42b7731f38ac723af29ed75ce2e4842/MainModule/Server/Core/Functions.lua#L1216-L1247
+	local plr = Arguments[1][1]
+
+	local rigType = RigType
+
+	local Humanoid: Humanoid = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
+
+	local HumanoidDescription = Humanoid:GetAppliedDescription() or game.Players:GetHumanoidDescriptionFromUserId(plr.UserId)
+	local newCharacterModel: Model = game.Players:CreateHumanoidModelFromDescription(HumanoidDescription, rigType)
+	local Animate: BaseScript = newCharacterModel.Animate
+
+	newCharacterModel.Humanoid.DisplayName = Humanoid.DisplayName
+	newCharacterModel.Name = plr.Name
+
+	local oldCFrame = plr.Character and plr.Character:GetPivot() or CFrame.new()
+
+	if plr.Character then
+		plr.Character:Destroy()
+		plr.Character = nil
+	end
+	plr.Character = newCharacterModel
+
+	newCharacterModel:PivotTo(oldCFrame)
+	newCharacterModel.Parent = workspace
+
+	-- hacky way to fix other people being unable to see animations.
+	for _=1,2 do
+		if Animate then
+			Animate.Disabled = not Animate.Disabled
+		end
+	end
+
+	return newCharacterModel
+
+end
+
+return {
+	['char'] = {
+		Arguments = {'Player', 'User ID'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player:Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			local OldCFrame = Character:GetPrimaryPartCFrame()
+
+			Player.CharacterAppearanceId = Arguments[2]
+			Player:LoadCharacter()
+			Player.Character:SetPrimaryPartCFrame(OldCFrame)
+
+		end
+	},
+	['cmds'] = {
+		OtherNames = {'help','commands'},
+		Arguments = {},
+		PermLevel =shared["__BoogleAdmin"].VIPRank,
+		Function = function(Context, Arguments)
+			shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Boogle Admin | CMDS-', shared["__BoogleAdmin"].HelpList[getAccessRank(Context.Invoker)])
+		end
+	},
+	['heal'] = {
+		Arguments = {'Player'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			Character.Humanoid.Health = Character.Humanoid.MaxHealth
+
+		end
+	},
+	['health'] = {
+		Arguments = {'Player', 'Amount'},
+		OtherNames = {'sethealth','hp'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			Character.Humanoid.MaxHealth = Arguments[2]
+			Character.Humanoid.Health = Character.Humanoid.MaxHealth
+
+		end
+	},
+	['jump'] = {
+		Arguments = {'Player'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			Character.Humanoid.Jump = true
+
+		end
+	},
+	['r15'] = {
+		Arguments = {'Player'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+			changeRig(Context,Arguments,Enum.HumanoidRigType.R15)
+		end
+	},
+	['r6'] = {
+		Arguments = {'Player'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+			changeRig(Context,Arguments,Enum.HumanoidRigType.R6)
+		end
+	},
+	['refresh'] = {
+		Arguments = {'Player'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player:Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			local OldCFrame = Character:GetPrimaryPartCFrame()
+
+			Player:LoadCharacter()
+			Player.Character:SetPrimaryPartCFrame(OldCFrame)
+
+		end
+	},
+	['reset'] = {
+		Arguments = {'Player'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player:Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+			Player:LoadCharacter()
+
+
+		end
+	},
+	['sit'] = {
+		Arguments = {'Player'},
+		PermLevel =shared["__BoogleAdmin"].VIPRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			Character.Humanoid.Sit = true
+
+		end
+	},
+	['size'] = {
+		Arguments = {'Player', 'Size'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(_, args: {}) -- Stolen from Adonis cuz im lazy
+			local plr = args[1][1]
+			local sizeLimit = 20
+			local num = math.clamp(tonumber(args[2]) or 1, 0.001, sizeLimit) -- Size limit exceeding over 20 would be unnecessary and may potientially create massive lag !!
+
+			if not args[2] or not tonumber(args[2]) then
+				num = 1
+			end
+
+			for _, v in pairs(game.Players:GetPlayers(plr)) do
+				if v ~= plr then continue end
+				local char = v.Character
+				local human = char and char:FindFirstChildOfClass("Humanoid")
+
+				if not human then
+
+					continue
+				end
+
+				if not SizedCharacters[char] then
+					SizedCharacters[char] = num
+				elseif SizedCharacters[char] and SizedCharacters[char]*num < sizeLimit then
+					SizedCharacters[char] = SizedCharacters[char]*num
+				else
+					continue
+				end
+
+				if human and human.RigType == Enum.HumanoidRigType.R15 then
+					for _, val in pairs(human:GetChildren()) do
+						if val:IsA("NumberValue") and val.Name:match(".*Scale") then
+							val.Value *= num
+						end
+					end
+				elseif human and human.RigType == Enum.HumanoidRigType.R6 then
+					local motors = {}
+					table.insert(motors, char.HumanoidRootPart:FindFirstChild("RootJoint"))
+					for _, motor in pairs(char.Torso:GetChildren()) do
+						if motor:IsA("Motor6D") then table.insert(motors, motor) end
+					end
+					for _, motor in pairs(motors) do
+						motor.C0 = CFrame.new((motor.C0.Position * num)) * (motor.C0 - motor.C0.Position)
+						motor.C1 = CFrame.new((motor.C1.Position * num)) * (motor.C1 - motor.C1.Position)
+					end
+
+					for _, v in ipairs(char:GetDescendants()) do
+						if v:IsA("BasePart") then
+							v.Size *= num
+						elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
+							local handle = v.Handle
+							handle.AccessoryWeld.C0 = CFrame.new((handle.AccessoryWeld.C0.Position * num)) * (handle.AccessoryWeld.C0 - handle.AccessoryWeld.C0.Position)
+							handle.AccessoryWeld.C1 = CFrame.new((handle.AccessoryWeld.C1.Position * num)) * (handle.AccessoryWeld.C1 - handle.AccessoryWeld.C1.Position)
+							local mesh = handle:FindFirstChildOfClass("SpecialMesh")
+							if mesh then
+								mesh.Scale *= num
+							end
+						elseif v:IsA("SpecialMesh") and v.Parent.Name ~= "Handle" and v.Parent.Name ~= "Head" then
+							v.Scale *= num
+						end
+					end
+				end
+			end
+		end
+	},
+	['speed'] = {
+		Arguments = {'Player', 'Number'},
+		OtherNames = {'spd','walkspeed'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			Character.Humanoid.WalkSpeed = Arguments[2]
+
+		end
+	},
+	['time'] = {
+		Arguments = {'Number'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			game.Lighting.ClockTime = Arguments[1]
+
+		end
+	},
+	
+	['unchar'] = {
+		Arguments = {'Player'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player:Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			local OldCFrame = Character:GetPrimaryPartCFrame()
+
+			Player.CharacterAppearanceId = Player.UserId
+			Player:LoadCharacter()
+			Player.Character:SetPrimaryPartCFrame(OldCFrame)
+
+		end
+	}
+	
+}]]></ProtectedString>
+						<int64 name="SourceAssetId">-1</int64>
+						<BinaryString name="Tags"></BinaryString>
+					</Properties>
+				</Item>
+				<Item class="ModuleScript" referent="RBX4D3F9273BF0A4332AD093FEEC4825465">
+					<Properties>
+						<BinaryString name="AttributesSerialize"></BinaryString>
+						<Content name="LinkedSource"><null></null></Content>
+						<string name="Name">Moderation</string>
+						<string name="ScriptGuid">{FF7FC287-AB2F-4B5C-BB63-B3CFD4F11D4C}</string>
+						<ProtectedString name="Source"><![CDATA[local DS = game:GetService('DataStoreService'):GetDataStore('BoogleAdminBans')
+local DS2 = game:GetService('DataStoreService'):GetOrderedDataStore('BoogleAdminBansO')
+
+local WDS = game:GetService('DataStoreService'):GetDataStore('BoogleAdminWarns2')
+
+local cache = {}
+local keyFormat = ('uid_%s')
+
+shared["__BoogleAdmin"].Banned = {}
 
 game.Players.PlayerAdded:Connect(function(P)
 	local banReason = shared["__BoogleAdmin"].Banned[P.UserId]
-	
+
 	if banReason then P:Kick('\n' .. ('You are currently banned from this server for: %s'):format(banReason)) end
 end)
 
+game.Players.PlayerAdded:Connect(function(P)
+	local banReason = DS:GetAsync(keyFormat:format(P.UserId))
+
+	if banReason then P:Kick('\n' .. ('You are currently banned from this game for: %s'):format(banReason)) end
+end)
+
+local output 
+
+function realLength(T)
+	local i = 0
+	for _,v  in pairs(T) do
+		i += 1
+	end
+	return i
+end
+
 return {
-	Name = script.Name,
-	Arguments = {'Player', 'Reason'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		print(Arguments)
-		shared["__BoogleAdmin"].Banned[Player.UserId] = Arguments[2] or 'No reason provided'
-		Player:Kick(('%s You were server-banned for: %s'):format('\n', Arguments[2] or 'No reason provided'))
-		
-		shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Banned User', ('%s was server-banned.'):format(Player.Name))
-		
-	end
+	['ban'] = {
+		Arguments = {'Player', 'Reason'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+			print(Arguments)
+			shared["__BoogleAdmin"].Banned[Player.UserId] = Arguments[2] or 'No reason provided'
+			Player:Kick(('%s You were server-banned for: %s'):format('\n', Arguments[2] or 'No reason provided'))
+
+			shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Banned User', ('%s was server-banned.'):format(Player.Name))
+
+		end
+	},
+	['kick'] = {
+		Arguments = {'Player', 'Reason'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			Player:Kick(('%s You were kicked for: %s'):format('\n', Arguments[2] or 'No reason provided'))
+
+		end
+	},
+	['unban'] = {
+		Arguments = {'User ID'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player:Player = Arguments[1]
+			if not Player then return end
+
+			shared["__BoogleAdmin"].Banned[Player] = nil
+
+			shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Unbanned User', ('%s was unbanned.'):format(game.Players:GetNameFromUserIdAsync(Player)))
+		end
+	},
+	['fly'] = {
+		Arguments = {'Player'},
+		PermLevel =shared["__BoogleAdmin"].VIPRank,
+		Function = function(Context, Arguments)
+
+			local Character = Arguments[1][1].Character
+			if not Character or Character:FindFirstChild('BoogleFly') then return end
+			local FlyScript = script.BoogleFly:Clone()
+			FlyScript.Parent = Character
+			FlyScript.Disabled = false
+
+			shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerFromCharacter(Character),'Flight Enabled', 'You can press E to toggle your flight.')
+
+		end
+	},
+	['unfly'] = {
+		Arguments = {'Player'},
+		PermLevel =shared["__BoogleAdmin"].VIPRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			pcall(function()
+				Character:FindFirstChild('BoogleFly'):SetAttribute('Fly', false)
+				wait(.25)
+				Character:FindFirstChild('BoogleFly'):Destroy()
+
+			end)
+
+
+		end
+	},
+	['f3x'] = {
+		Arguments = {'Player'},
+		PermLevel = shared["__BoogleAdmin"].HeadAdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			if not Player then return end
+
+			if Player.Backpack:FindFirstChild("Building Tools") then return end
+
+			local Gear = script["Building Tools"]:Clone()
+			Gear.Parent = Player.Backpack
+
+		end
+	},
+	['pban'] = {
+		Arguments = {'Player', 'Reason'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+
+			if not Player then return end
+
+			DS:SetAsync(keyFormat:format(Player.UserId),Arguments[2] or 'No reason provided')
+			DS2:SetAsync(Player.UserId,os.time())
+
+			pcall(function()
+				Player:Kick(('%s You were game banned for: %s'):format('\n', Arguments[2] or 'No reason provided'))
+			end)
+
+			shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Banned User', ('%s was game-banned.'):format(game.Players:GetNameFromUserIdAsync(Player.UserId)))
+
+		end
+	},
+	['unpban'] = {
+		Arguments = {'User ID'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1]
+			if not Player then return end
+
+			DS:RemoveAsync(keyFormat:format(Player))
+			DS2:RemoveAsync(keyFormat:format(Player))
+
+			shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Unbanned User', ('%s was unbanned.'):format(game.Players:GetNameFromUserIdAsync(Player)))
+		end
+	},
+	['bring'] = {
+		Arguments = {'Player'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			local ContextRunner = game.Players:GetPlayerByUserId(Context.Invoker).Character
+
+			Character:SetPrimaryPartCFrame(ContextRunner:GetPrimaryPartCFrame() * CFrame.new(0,2,0))
+
+
+		end
+	},
+	['to'] = {
+		Arguments = {'Player'},
+		PermLevel =shared["__BoogleAdmin"].VIPRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player then return end
+
+
+			local ContextRunner = game.Players:GetPlayerByUserId(Context.Invoker).Character
+
+			ContextRunner:SetPrimaryPartCFrame(Character:GetPrimaryPartCFrame() * CFrame.new(0,2,0))
+
+
+		end
+	},
+	['logs'] = {
+		OtherNames = {},
+		Arguments = {},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local OutputString = ''
+			local Logs = shared["__BoogleAdmin"].Logs
+
+			for Iter = #Logs, 1, -1 do
+				local Context = Logs[Iter]
+				OutputString = OutputString .. ("%s @ %s -> %s"):format(Context.InvokerName, os.date('%c', Context.Time), Context.UserInput) .. '\n'
+			end
+
+			shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Server Admin Logs', OutputString)
+		end
+	},
+	['admins'] = {
+		OtherNames = {'mods'},
+		Arguments = {},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+			local result = output
+
+
+
+			if not result then
+				local OutputString = ''
+
+				local FancyPerms = shared["__BoogleAdmin"].Config.PermToUserFront
+				for PermGroupIndex = realLength(FancyPerms), 1, -1 do
+					local PermGroupName = FancyPerms[PermGroupIndex] or 'VIP'
+					OutputString = OutputString .. ('<font size="20" color="#FFA500">%s</font>'):format(PermGroupName:upper())   .. '\n'
+
+					for _, UserId in pairs(shared["__BoogleAdmin"].Config.Permissions[PermGroupIndex]) do
+						OutputString = OutputString .. ('-> @%s %s'):format(game.Players:GetNameFromUserIdAsync(UserId), if game.Players:GetPlayerByUserId(UserId) then '<font color="rgb(0,255,0)">[IN-GAME]</font>' else '') .. '\n'
+					end
+				end
+
+				output = OutputString
+				result = output
+			end
+
+			shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Admin List', result)
+		end
+	},
+	['view'] = {
+		Arguments = {'Player'},
+		OtherNames = {'spectate','spec','watch'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			local Character = Player.Character
+			if not Player or not Character then return end
+
+
+			local Script = script.BoogleAdminView:Clone()
+			Script.CharacterToSpectate.Value = Character
+			Script.Parent = game.Players:GetPlayerByUserId(Context.Invoker).Character
+			if script.Parent == Character then script:Destroy() end
+
+		end
+	},
+	['unview'] = {
+		Arguments = {},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+
+			local Character = game.Players:GetPlayerByUserId(Context.Invoker).Character
+
+			if Character:FindFirstChild('BoogleAdminView') then
+				Character.BoogleAdminView:Destroy()
+			end
+
+
+		end
+	},
+	['bans'] = {
+		Arguments = {'Page Number'},
+		PermLevel =shared["__BoogleAdmin"].AdminRank,
+		Function = function(Context, Arguments)
+			local displayNumber = 1
+			local PageNumber = Arguments[1] or 1
+
+			if not PageNumber then return end
+			local OutputString
+
+			shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Loading ban list...', 'Please be patient.')
+
+			local Pages: DataStorePages = DS2:GetSortedAsync(true,10)
+
+
+
+			for i = 2, PageNumber do
+				if Pages.IsFinished then break end
+				displayNumber += 1
+				Pages:AdvanceToNextPageAsync()
+
+			end
+
+			local BanList = Pages:GetCurrentPage()
+
+			local Output = 'No bans recorded on this page.'
+			if #BanList > 0 then Output = '' end
+			for _, Ban in pairs(BanList) do
+				local usrname = cache[Ban.key] or game.Players:GetNameFromUserIdAsync(Ban.key)
+				cache[Ban.key] = usrname
+				Output = Output .. ('%s | @%s | Reason: %s '):format(os.date('%c', Ban.value),usrname, DS:GetAsync('uid_' .. Ban.key) or 'No Reason Provided') .. '\n'
+			end
+
+
+
+			shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),('Ban List PG# %02d'):format(displayNumber), Output)
+
+		end
+	},
+	['warn'] = {
+		Arguments = {'Player', 'Reason'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1][1]
+			print(Arguments)
+			if not Player then return end
+
+			WDS:UpdateAsync(keyFormat:format(Player.UserId),function(CurrentWarns, keyInfo)
+				if not CurrentWarns then CurrentWarns = {} end
+				table.insert(CurrentWarns,{
+					Reason = Arguments[2] or 'No reason provided.',
+					Time = os.time(),
+					Mod = Context.Invoker
+				})
+
+				return CurrentWarns
+			end)
+
+
+			shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Warned User', ('%s was warned.'):format(game.Players:GetNameFromUserIdAsync(Player.UserId)))
+
+		end
+	},
+	['warns'] = {
+		Arguments = {'User ID'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+
+			local Player = Arguments[1]
+
+			if not Player then return end
+
+			local Output = ''
+
+			for _, Warn in pairs(WDS:GetAsync(keyFormat:format(Player)) or {}) do
+				Output = Output .. ('%s | Reason: %s | Warned by: @%s'):format(os.date('%c',Warn.Time), Warn.Reason, game.Players:GetNameFromUserIdAsync(Warn.Mod)) .. '\n'
+			end
+
+			if #Output == 0 then
+				Output = 'No warns for this user.'
+			end
+
+			shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),('Warns for @%s'):format(game.Players:GetNameFromUserIdAsync(Player)), Output)
+
+		end
+	},
+	['info'] = {
+		OtherNames = {'whois'},
+		Arguments = {'Player'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+			local p: Player = Arguments[1][1]
+			if not p then return end
+
+			local OutputString = (([[Player Name: %s
+		DisplayName: %s
+		Account Age: %s days (%s)
+		Hours on game: %s
+		]]):format(
+					p.Name,
+					p.DisplayName,
+					p.AccountAge,
+					os.date('%x', os.time() - (86400 * p.AccountAge)),
+					math.floor(p.leaderstats.Minutes.Value / 60)
+				)):gsub('	','')
+
+
+			shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),p.Name, OutputString)
+		end
+	},
+	['message'] = {
+		OtherNames = {'m','msg','announce','announcement'},
+		Arguments = {'Message'},
+		PermLevel = shared["__BoogleAdmin"].ModRank,
+		Function = function(Context, Arguments)
+			local Message = script.Message
+			Message.Title.Text = ("Message from @%s"):format(game.Players:GetPlayerByUserId(Context.Invoker).Name)
+			Message.Message.Text = Arguments[1]
+			for _, v:Player in pairs(game.Players:GetPlayers()) do
+				local m = Message:Clone()
+				m.Parent = v.PlayerGui
+				game.Debris:AddItem(m,5)
+			end
+		end
+	}
 }]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXF6F7F23F53104D988A77985EADF62952">
+						<int64 name="SourceAssetId">-1</int64>
+						<BinaryString name="Tags"></BinaryString>
+					</Properties>
+					<Item class="LocalScript" referent="RBX6D5ECADD6BE04E17A86C083A703618DE">
 						<Properties>
 							<BinaryString name="AttributesSerialize"></BinaryString>
+							<bool name="Disabled">true</bool>
 							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">kick</string>
-							<string name="ScriptGuid">{406BFA9B-7121-4741-B324-6DC3919F3940}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player', 'Reason'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		Player:Kick(('%s You were kicked for: %s'):format('\n', Arguments[2] or 'No reason provided'))
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXA0A3A28933B04F3DADFB59AFAE105FCA">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">unban</string>
-							<string name="ScriptGuid">{CAC22A12-EC3D-4616-98E2-5033627C1CC9}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'User ID'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		
-		local Player:Player = Arguments[1]
-		if not Player then return end
-		
-		shared["__BoogleAdmin"].Banned[Player] = nil
-		
-		shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Unbanned User', ('%s was unbanned.'):format(game.Players:GetNameFromUserIdAsync(Player)))
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXE60C391DFBD04E99B322CA17025CAEE4">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">fly</string>
-							<string name="ScriptGuid">{2E30966C-99FC-4AC3-BFC7-80F066DB2DC8}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].VIPRank,
-	Function = function(Context, Arguments)
-		
-		local Character = Arguments[1][1].Character
-		if not Character or Character:FindFirstChild('BoogleFly') then return end
-		local FlyScript = script.BoogleFly:Clone()
-		FlyScript.Parent = Character
-		FlyScript.Disabled = false
-		
-		shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerFromCharacter(Character),'Flight Enabled', 'You can press E to toggle your flight.')
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-						<Item class="LocalScript" referent="RBX6D5ECADD6BE04E17A86C083A703618DE">
-							<Properties>
-								<BinaryString name="AttributesSerialize"></BinaryString>
-								<bool name="Disabled">true</bool>
-								<Content name="LinkedSource"><null></null></Content>
-								<string name="Name">BoogleFly</string>
-								<string name="ScriptGuid">{40235919-D6A6-4CD7-AC40-C20843051429}</string>
-								<ProtectedString name="Source"><![CDATA[local FlightEnabled = false
+							<string name="Name">BoogleFly</string>
+							<string name="ScriptGuid">{40235919-D6A6-4CD7-AC40-C20843051429}</string>
+							<ProtectedString name="Source"><![CDATA[local FlightEnabled = false
 local FlightSpeed = 100
 
 local Character = script.Parent
@@ -853,2176 +2099,242 @@ script.AttributeChanged:Connect(function(a)
 	AlignOri:Destroy()
 end)
 ]]></ProtectedString>
+							<int64 name="SourceAssetId">-1</int64>
+							<BinaryString name="Tags"></BinaryString>
+						</Properties>
+					</Item>
+					<Item class="ScreenGui" referent="RBX3D1B7641FF6D432182D0CBD4522775BE">
+						<Properties>
+							<BinaryString name="AttributesSerialize"></BinaryString>
+							<bool name="AutoLocalize">true</bool>
+							<int name="DisplayOrder">5</int>
+							<bool name="Enabled">true</bool>
+							<bool name="IgnoreGuiInset">true</bool>
+							<string name="Name">Message</string>
+							<bool name="ResetOnSpawn">false</bool>
+							<Ref name="RootLocalizationTable">null</Ref>
+							<int64 name="SourceAssetId">-1</int64>
+							<BinaryString name="Tags"></BinaryString>
+							<token name="ZIndexBehavior">1</token>
+						</Properties>
+						<Item class="TextLabel" referent="RBXF5C4155C041F47A49FCE933DABBDA1D9">
+							<Properties>
+								<bool name="Active">false</bool>
+								<Vector2 name="AnchorPoint">
+									<X>0</X>
+									<Y>0</Y>
+								</Vector2>
+								<BinaryString name="AttributesSerialize"></BinaryString>
+								<bool name="AutoLocalize">true</bool>
+								<token name="AutomaticSize">0</token>
+								<Color3 name="BackgroundColor3">
+									<R>0</R>
+									<G>0</G>
+									<B>0</B>
+								</Color3>
+								<float name="BackgroundTransparency">0.600000024</float>
+								<Color3 name="BorderColor3">
+									<R>0.105882362</R>
+									<G>0.164705887</G>
+									<B>0.207843155</B>
+								</Color3>
+								<token name="BorderMode">0</token>
+								<int name="BorderSizePixel">1</int>
+								<bool name="ClipsDescendants">false</bool>
+								<bool name="Draggable">false</bool>
+								<token name="Font">10</token>
+								<Font name="FontFace"></Font>
+								<int name="LayoutOrder">0</int>
+								<float name="LineHeight">0.899999976</float>
+								<int name="MaxVisibleGraphemes">-1</int>
+								<string name="Name">Message</string>
+								<Ref name="NextSelectionDown">null</Ref>
+								<Ref name="NextSelectionLeft">null</Ref>
+								<Ref name="NextSelectionRight">null</Ref>
+								<Ref name="NextSelectionUp">null</Ref>
+								<UDim2 name="Position">
+									<XS>0</XS>
+									<XO>0</XO>
+									<YS>0</YS>
+									<YO>0</YO>
+								</UDim2>
+								<bool name="RichText">false</bool>
+								<Ref name="RootLocalizationTable">null</Ref>
+								<float name="Rotation">0</float>
+								<bool name="Selectable">false</bool>
+								<Ref name="SelectionImageObject">null</Ref>
+								<UDim2 name="Size">
+									<XS>1</XS>
+									<XO>0</XO>
+									<YS>1</YS>
+									<YO>0</YO>
+								</UDim2>
+								<token name="SizeConstraint">0</token>
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
+								<string name="Text">Label</string>
+								<Color3 name="TextColor3">
+									<R>1</R>
+									<G>1</G>
+									<B>1</B>
+								</Color3>
+								<bool name="TextScaled">false</bool>
+								<float name="TextSize">25</float>
+								<Color3 name="TextStrokeColor3">
+									<R>0</R>
+									<G>0</G>
+									<B>0</B>
+								</Color3>
+								<float name="TextStrokeTransparency">1</float>
+								<float name="TextTransparency">0</float>
+								<token name="TextTruncate">0</token>
+								<bool name="TextWrapped">true</bool>
+								<token name="TextXAlignment">2</token>
+								<token name="TextYAlignment">1</token>
+								<bool name="Visible">true</bool>
+								<int name="ZIndex">1</int>
 							</Properties>
+							<Item class="UIStroke" referent="RBX73398C3E886C427EBE4BEF9B0106854D">
+								<Properties>
+									<token name="ApplyStrokeMode">0</token>
+									<BinaryString name="AttributesSerialize"></BinaryString>
+									<Color3 name="Color">
+										<R>0.423529446</R>
+										<G>0.423529446</G>
+										<B>0.423529446</B>
+									</Color3>
+									<bool name="Enabled">true</bool>
+									<token name="LineJoinMode">0</token>
+									<string name="Name">UIStroke</string>
+									<int64 name="SourceAssetId">-1</int64>
+									<BinaryString name="Tags"></BinaryString>
+									<float name="Thickness">1</float>
+									<float name="Transparency">0</float>
+								</Properties>
+							</Item>
+						</Item>
+						<Item class="TextLabel" referent="RBXED859C640D724705A1EF3117156DB22D">
+							<Properties>
+								<bool name="Active">false</bool>
+								<Vector2 name="AnchorPoint">
+									<X>0</X>
+									<Y>0</Y>
+								</Vector2>
+								<BinaryString name="AttributesSerialize"></BinaryString>
+								<bool name="AutoLocalize">true</bool>
+								<token name="AutomaticSize">0</token>
+								<Color3 name="BackgroundColor3">
+									<R>0</R>
+									<G>0</G>
+									<B>0</B>
+								</Color3>
+								<float name="BackgroundTransparency">1</float>
+								<Color3 name="BorderColor3">
+									<R>0.105882362</R>
+									<G>0.164705887</G>
+									<B>0.207843155</B>
+								</Color3>
+								<token name="BorderMode">0</token>
+								<int name="BorderSizePixel">1</int>
+								<bool name="ClipsDescendants">false</bool>
+								<bool name="Draggable">false</bool>
+								<token name="Font">10</token>
+								<Font name="FontFace"></Font>
+								<int name="LayoutOrder">0</int>
+								<float name="LineHeight">0.899999976</float>
+								<int name="MaxVisibleGraphemes">-1</int>
+								<string name="Name">Title</string>
+								<Ref name="NextSelectionDown">null</Ref>
+								<Ref name="NextSelectionLeft">null</Ref>
+								<Ref name="NextSelectionRight">null</Ref>
+								<Ref name="NextSelectionUp">null</Ref>
+								<UDim2 name="Position">
+									<XS>0</XS>
+									<XO>0</XO>
+									<YS>0</YS>
+									<YO>0</YO>
+								</UDim2>
+								<bool name="RichText">false</bool>
+								<Ref name="RootLocalizationTable">null</Ref>
+								<float name="Rotation">0</float>
+								<bool name="Selectable">false</bool>
+								<Ref name="SelectionImageObject">null</Ref>
+								<UDim2 name="Size">
+									<XS>1</XS>
+									<XO>0</XO>
+									<YS>0.349999994</YS>
+									<YO>0</YO>
+								</UDim2>
+								<token name="SizeConstraint">0</token>
+								<int64 name="SourceAssetId">-1</int64>
+								<BinaryString name="Tags"></BinaryString>
+								<string name="Text">Message from LeBoogle</string>
+								<Color3 name="TextColor3">
+									<R>1</R>
+									<G>1</G>
+									<B>1</B>
+								</Color3>
+								<bool name="TextScaled">false</bool>
+								<float name="TextSize">28</float>
+								<Color3 name="TextStrokeColor3">
+									<R>0</R>
+									<G>0</G>
+									<B>0</B>
+								</Color3>
+								<float name="TextStrokeTransparency">1</float>
+								<float name="TextTransparency">0</float>
+								<token name="TextTruncate">0</token>
+								<bool name="TextWrapped">true</bool>
+								<token name="TextXAlignment">2</token>
+								<token name="TextYAlignment">2</token>
+								<bool name="Visible">true</bool>
+								<int name="ZIndex">1</int>
+							</Properties>
+							<Item class="UIStroke" referent="RBX5F48AC7F1C764F66BAD51DFB3D48F1C0">
+								<Properties>
+									<token name="ApplyStrokeMode">0</token>
+									<BinaryString name="AttributesSerialize"></BinaryString>
+									<Color3 name="Color">
+										<R>0.423529446</R>
+										<G>0.423529446</G>
+										<B>0.423529446</B>
+									</Color3>
+									<bool name="Enabled">true</bool>
+									<token name="LineJoinMode">0</token>
+									<string name="Name">UIStroke</string>
+									<int64 name="SourceAssetId">-1</int64>
+									<BinaryString name="Tags"></BinaryString>
+									<float name="Thickness">1</float>
+									<float name="Transparency">0</float>
+								</Properties>
+							</Item>
 						</Item>
 					</Item>
-					<Item class="ModuleScript" referent="RBXBCF23EF23C9247C881E7FA278C6C05A6">
+					<Item class="LocalScript" referent="RBX3FF76912D1B3443DA2EC6C6A338683E6">
 						<Properties>
 							<BinaryString name="AttributesSerialize"></BinaryString>
+							<bool name="Disabled">false</bool>
 							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">unfly</string>
-							<string name="ScriptGuid">{C65030BD-68BB-41A5-AECE-1787D6F337E4}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].VIPRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		pcall(function()
-			Character:FindFirstChild('BoogleFly'):SetAttribute('Fly', false)
-			wait(.25)
-			Character:FindFirstChild('BoogleFly'):Destroy()
-			
-		end)
-		
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX12194775C68A4727BD5607F5594A07F9">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">f3x</string>
-							<string name="ScriptGuid">{C9E9BE51-F4D3-4D1F-82B5-F2E56BCDD7C2}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel = shared["__BoogleAdmin"].HeadAdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		if not Player then return end
-		
-		if Player.Backpack:FindFirstChild("Building Tools") then return end
-		
-		local Gear = script["Building Tools"]:Clone()
-		Gear.Parent = Player.Backpack
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXBD18628F29BB4F88AB74DAA7BAE1D04F">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">pban</string>
-							<string name="ScriptGuid">{3A4314F2-0F13-46F5-B1FE-FDAA067DA970}</string>
-							<ProtectedString name="Source"><![CDATA[local DS = game:GetService('DataStoreService'):GetDataStore('BoogleAdminBans')
-local DS2 = game:GetService('DataStoreService'):GetOrderedDataStore('BoogleAdminBansO')
-
-local keyFormat = ('uid_%s')
-
-game.Players.PlayerAdded:Connect(function(P)
-	local banReason = DS:GetAsync(keyFormat:format(P.UserId))
-	
-	if banReason then P:Kick('\n' .. ('You are currently banned from this game for: %s'):format(banReason)) end
-end)
-
-return {
-	Name = script.Name,
-	Arguments = {'Player', 'Reason'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		
-		if not Player then return end
-		
-		DS:SetAsync(keyFormat:format(Player.UserId),Arguments[2] or 'No reason provided')
-		DS2:SetAsync(Player.UserId,os.time())
-		
-		pcall(function()
-			Player:Kick(('%s You were game banned for: %s'):format('\n', Arguments[2] or 'No reason provided'))
-		end)
-
-		shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Banned User', ('%s was game-banned.'):format(game.Players:GetNameFromUserIdAsync(Player.UserId)))
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX4106759F539343359C2A4EB417CAB322">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">unpban</string>
-							<string name="ScriptGuid">{4F1F8DD1-A523-4F06-A0D0-440E58D96BF8}</string>
-							<ProtectedString name="Source"><![CDATA[local DS = game:GetService('DataStoreService'):GetDataStore('BoogleAdminBans')
-local DS2 = game:GetService('DataStoreService'):GetOrderedDataStore('BoogleAdminBansO')
-
-local keyFormat = ('uid_%s')
-
-return {
-	Name = script.Name,
-	Arguments = {'User ID'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-
-		local Player = Arguments[1]
-		if not Player then return end
-
-		DS:RemoveAsync(keyFormat:format(Player))
-		DS2:RemoveAsync(keyFormat:format(Player))
-		
-		shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Unbanned User', ('%s was unbanned.'):format(game.Players:GetNameFromUserIdAsync(Player)))
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXFCD0FD5F04B6480EBBB7FB65172E59FD">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">bring</string>
-							<string name="ScriptGuid">{ADA27852-BE98-4D5C-908D-A5F108D0290F}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-
-
-		local ContextRunner = game.Players:GetPlayerByUserId(Context.Invoker).Character
-
-		Character:SetPrimaryPartCFrame(ContextRunner:GetPrimaryPartCFrame() * CFrame.new(0,2,0))
-
-
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXE64BEF77F815446AB28343E72ACE75D8">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">to</string>
-							<string name="ScriptGuid">{10EF0D9F-0F4B-4DDB-AE5E-F92464B14085}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].VIPRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		local ContextRunner = game.Players:GetPlayerByUserId(Context.Invoker).Character
-		
-		ContextRunner:SetPrimaryPartCFrame(Character:GetPrimaryPartCFrame() * CFrame.new(0,2,0))
-		
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXF9A3F1DF9857473E81BA10C2EF2DF2D3">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">logs</string>
-							<string name="ScriptGuid">{7B11CF11-14DA-4498-8F98-C59E7F4C2028}</string>
-							<ProtectedString name="Source"><![CDATA[function getAccessRank(ID)
-	for K, v in pairs(shared["__BoogleAdmin"].Config.Permissions) do
-		if table.find(v,ID) then
-			return K
-		end
-	end
-	return -1
-end
-
-type Context = {
-	Time: number,
-	InvokerName: string,
-	Invoker: number,
-	ID: number,
-	Command: string,
-	UserInput: string,
-}
-
-return {
-	Name = script.Name,
-	OtherNames = {},
-	Arguments = {},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local OutputString = ''
-		local Logs = shared["__BoogleAdmin"].Logs
-		
-		for Iter = #Logs, 1, -1 do
-			local Context = Logs[Iter]
-			OutputString = OutputString .. ("%s @ %s -> %s"):format(Context.InvokerName, os.date('%c', Context.Time), Context.UserInput) .. '\n'
-		end
-		
-		shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Server Admin Logs', OutputString)
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXFA2D726BD57146DE866F4F4113DE962C">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">admins</string>
-							<string name="ScriptGuid">{65FAF687-4DF2-48A1-A9BD-14F755AF7A46}</string>
-							<ProtectedString name="Source"><![CDATA[function getAccessRank(ID)
-	for K, v in pairs(shared["__BoogleAdmin"].Config.Permissions) do
-		if table.find(v,ID) then
-			return K
-		end
-	end
-	return -1
-end
-
-type Context = {
-	Time: number,
-	InvokerName: string,
-	Invoker: number,
-	ID: number,
-	Command: string,
-	UserInput: string,
-}
-
-local output 
-
-function realLength(T)
-	local i = 0
-	for _,v  in pairs(T) do
-		i += 1
-	end
-	return i
-end
-
-
-
-return {
-	Name = script.Name,
-	OtherNames = {'mods'},
-	Arguments = {},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		local result = output
-		
-		
-		
-		if not result then
-			local OutputString = ''
-
-			local FancyPerms = shared["__BoogleAdmin"].Config.PermToUserFront
-			for PermGroupIndex = realLength(FancyPerms), 1, -1 do
-				local PermGroupName = FancyPerms[PermGroupIndex] or 'VIP'
-				OutputString = OutputString .. ('<font size="20" color="#FFA500">%s</font>'):format(PermGroupName:upper())   .. '\n'
-				
-				for _, UserId in pairs(shared["__BoogleAdmin"].Config.Permissions[PermGroupIndex]) do
-					OutputString = OutputString .. ('-> @%s %s'):format(game.Players:GetNameFromUserIdAsync(UserId), if game.Players:GetPlayerByUserId(UserId) then '<font color="rgb(0,255,0)">[IN-GAME]</font>' else '') .. '\n'
-				end
-			end
-			
-			output = OutputString
-			result = output
-		end
-
-		shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Admin List', result)
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXB3D7B9F89EB242FD864D1B9A599BE23A">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">view</string>
-							<string name="ScriptGuid">{AD9CF542-5098-40E3-BC29-670103BBC383}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	OtherNames = {'spectate','spec','watch'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player or not Character then return end
-		
-		
-		local Script = script.BoogleAdminView:Clone()
-		Script.CharacterToSpectate.Value = Character
-		Script.Parent = game.Players:GetPlayerByUserId(Context.Invoker).Character
-		if script.Parent == Character then script:Destroy() end
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-						<Item class="LocalScript" referent="RBX3FF76912D1B3443DA2EC6C6A338683E6">
-							<Properties>
-								<BinaryString name="AttributesSerialize"></BinaryString>
-								<bool name="Disabled">false</bool>
-								<Content name="LinkedSource"><null></null></Content>
-								<string name="Name">BoogleAdminView</string>
-								<string name="ScriptGuid">{11F93718-15A8-4A97-8592-AD66C85ACD38}</string>
-								<ProtectedString name="Source"><![CDATA[local Camera = workspace.CurrentCamera
+							<string name="Name">BoogleAdminView</string>
+							<string name="ScriptGuid">{11F93718-15A8-4A97-8592-AD66C85ACD38}</string>
+							<ProtectedString name="Source"><![CDATA[local Camera = workspace.CurrentCamera
 Camera.CameraSubject = script:WaitForChild('CharacterToSpectate').Value
 
 script.AncestryChanged:Wait()
 Camera.CameraSubject = game.Players.LocalPlayer.Character
 ]]></ProtectedString>
-								<int64 name="SourceAssetId">-1</int64>
-								<BinaryString name="Tags"></BinaryString>
-							</Properties>
-							<Item class="ObjectValue" referent="RBX9D19AD4F3C6447C6BB91FC4712E9D681">
-								<Properties>
-									<BinaryString name="AttributesSerialize"></BinaryString>
-									<string name="Name">CharacterToSpectate</string>
-									<int64 name="SourceAssetId">-1</int64>
-									<BinaryString name="Tags"></BinaryString>
-									<Ref name="Value">null</Ref>
-								</Properties>
-							</Item>
-						</Item>
-					</Item>
-					<Item class="ModuleScript" referent="RBX651FEFA606B644889D230D10A6931F59">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">unview</string>
-							<string name="ScriptGuid">{8508CACE-1EAF-488C-9235-F7D82F536493}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Character = game.Players:GetPlayerByUserId(Context.Invoker).Character
-		
-		if Character:FindFirstChild('BoogleAdminView') then
-			Character.BoogleAdminView:Destroy()
-		end
-		
-		
-	end
-}]]></ProtectedString>
 							<int64 name="SourceAssetId">-1</int64>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXDE4E876A5EF6413EB4D4C9143D875EC3">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">bans</string>
-							<string name="ScriptGuid">{CFFE8EA8-D753-4B0A-AF08-62C38E2F6AB2}</string>
-							<ProtectedString name="Source"><![CDATA[local DS = game:GetService('DataStoreService'):GetDataStore('BoogleAdminBans')
-local DS2 = game:GetService('DataStoreService'):GetOrderedDataStore('BoogleAdminBansO')
-
-local cache = {}
-
-return {
-	Name = script.Name,
-	Arguments = {'Page Number'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		local displayNumber = 1
-		local PageNumber = Arguments[1] or 1
-
-		if not PageNumber then return end
-		local OutputString
-		
-		shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Loading ban list...', 'Please be patient.')
-		
-		local Pages: DataStorePages = DS2:GetSortedAsync(true,10)
-		
-		
-		
-		for i = 2, PageNumber do
-			if Pages.IsFinished then break end
-			displayNumber += 1
-			Pages:AdvanceToNextPageAsync()
-			
-		end
-		
-		local BanList = Pages:GetCurrentPage()
-		
-		local Output = 'No bans recorded on this page.'
-		if #BanList > 0 then Output = '' end
-		for _, Ban in pairs(BanList) do
-			local usrname = cache[Ban.key] or game.Players:GetNameFromUserIdAsync(Ban.key)
-			cache[Ban.key] = usrname
-			Output = Output .. ('%s | @%s | Reason: %s '):format(os.date('%c', Ban.value),usrname, DS:GetAsync('uid_' .. Ban.key) or 'No Reason Provided') .. '\n'
-		end
-		
-		
-		
-		shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),('Ban List PG# %02d'):format(displayNumber), Output)
-
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX7A1926D717C54DC0811AA1E66B94733F">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">warn</string>
-							<string name="ScriptGuid">{CF1F1BA9-DE93-446E-BFA1-CFD3F0F1FC54}</string>
-							<ProtectedString name="Source"><![CDATA[local DS = game:GetService('DataStoreService'):GetDataStore('BoogleAdminWarns2')
-
-local keyFormat = ('uid_%s')
-
-return {
-	Name = script.Name,
-	Arguments = {'Player', 'Reason'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		print(Arguments)
-		if not Player then return end
-		
-		DS:UpdateAsync(keyFormat:format(Player.UserId),function(CurrentWarns, keyInfo)
-			if not CurrentWarns then CurrentWarns = {} end
-			table.insert(CurrentWarns,{
-				Reason = Arguments[2] or 'No reason provided.',
-				Time = os.time(),
-				Mod = Context.Invoker
-			})
-			
-			return CurrentWarns
-		end)
-		
-
-		shared["__BoogleAdmin"].Remotes.Notify:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Warned User', ('%s was warned.'):format(game.Players:GetNameFromUserIdAsync(Player.UserId)))
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXC316390BAAAB4A8791DF3DDB550FD0B2">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">warns</string>
-							<string name="ScriptGuid">{DB7677CC-B904-4ABA-A204-DE5BCE31CDFF}</string>
-							<ProtectedString name="Source"><![CDATA[local DS = game:GetService('DataStoreService'):GetDataStore('BoogleAdminWarns2')
-
-local keyFormat = ('uid_%s')
-
-local cache = {}
-
-return {
-	Name = script.Name,
-	Arguments = {'User ID'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-
-		local Player = Arguments[1]
-
-		if not Player then return end
-		
-		local Output = ''
-		
-		for _, Warn in pairs(DS:GetAsync(keyFormat:format(Player)) or {}) do
-			Output = Output .. ('%s | Reason: %s | Warned by: @%s'):format(os.date('%c',Warn.Time), Warn.Reason, game.Players:GetNameFromUserIdAsync(Warn.Mod)) .. '\n'
-		end
-		
-		if #Output == 0 then
-			Output = 'No warns for this user.'
-		end
-		
-		shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),('Warns for @%s'):format(game.Players:GetNameFromUserIdAsync(Player)), Output)
-
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX6ADC3F92BE3F495E9A8DE97D14D02753">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">info</string>
-							<string name="ScriptGuid">{3E8F7F8C-AFB4-4937-9AB9-A355220C2C7F}</string>
-							<ProtectedString name="Source"><![CDATA[function getAccessRank(ID)
-	for K, v in pairs(shared["__BoogleAdmin"].Config.Permissions) do
-		if table.find(v,ID) then
-			return K
-		end
-	end
-	return -1
-end
-
-type Context = {
-	Time: number,
-	InvokerName: string,
-	Invoker: number,
-	ID: number,
-	Command: string,
-	UserInput: string,
-}
-
-return {
-	Name = script.Name,
-	OtherNames = {'whois'},
-	Arguments = {'Player'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		local p: Player = Arguments[1][1]
-		if not p then return end
-		
-		local OutputString = (([[Player Name: %s
-		DisplayName: %s
-		Account Age: %s days (%s)
-		Hours on game: %s
-		]]):format(
-			p.Name,
-			p.DisplayName,
-			p.AccountAge,
-			os.date('%x', os.time() - (86400 * p.AccountAge)),
-			math.floor(p.leaderstats.Minutes.Value / 60)
-		)):gsub('	','')
-		
-		
-		shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),p.Name, OutputString)
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX227E4E11375043E48C45921919EA8EDD">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">info</string>
-							<string name="ScriptGuid">{23833346-C1BA-4CBF-8470-3406FC6677E8}</string>
-							<ProtectedString name="Source"><![CDATA[function getAccessRank(ID)
-	for K, v in pairs(shared["__BoogleAdmin"].Config.Permissions) do
-		if table.find(v,ID) then
-			return K
-		end
-	end
-	return -1
-end
-
-type Context = {
-	Time: number,
-	InvokerName: string,
-	Invoker: number,
-	ID: number,
-	Command: string,
-	UserInput: string,
-}
-
-return {
-	Name = script.Name,
-	OtherNames = {},
-	Arguments = {},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local OutputString = ''
-		local Logs = shared["__BoogleAdmin"].Logs
-		
-		for Iter = #Logs, 1, -1 do
-			local Context = Logs[Iter]
-			OutputString = OutputString .. ("%s @ %s -> %s"):format(Context.InvokerName, os.date('%c', Context.Time), Context.UserInput) .. '\n'
-		end
-		
-		shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Server Admin Logs', OutputString)
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX5F2C4EDB9D8944098AF96573ABD94B67">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">message</string>
-							<string name="ScriptGuid">{F44128AF-51DF-406E-B7B4-FB865B18CE8D}</string>
-							<ProtectedString name="Source"><![CDATA[function getAccessRank(ID)
-	for K, v in pairs(shared["__BoogleAdmin"].Config.Permissions) do
-		if table.find(v,ID) then
-			return K
-		end
-	end
-	return -1
-end
-
-type Context = {
-	Time: number,
-	InvokerName: string,
-	Invoker: number,
-	ID: number,
-	Command: string,
-	UserInput: string,
-}
-
-return {
-	Name = script.Name,
-	OtherNames = {'m','msg','announce','announcement'},
-	Arguments = {'Message'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		local Message = script.Message
-		Message.Title.Text = ("Message from @%s"):format(game.Players:GetPlayerByUserId(Context.Invoker).Name)
-		Message.Message.Text = Arguments[1]
-		for _, v:Player in pairs(game.Players:GetPlayers()) do
-			local m = Message:Clone()
-			m.Parent = v.PlayerGui
-			game.Debris:AddItem(m,5)
-		end
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-						<Item class="ScreenGui" referent="RBX3D1B7641FF6D432182D0CBD4522775BE">
+						<Item class="ObjectValue" referent="RBX9D19AD4F3C6447C6BB91FC4712E9D681">
 							<Properties>
 								<BinaryString name="AttributesSerialize"></BinaryString>
-								<bool name="AutoLocalize">true</bool>
-								<int name="DisplayOrder">5</int>
-								<bool name="Enabled">true</bool>
-								<bool name="IgnoreGuiInset">true</bool>
-								<string name="Name">Message</string>
-								<bool name="ResetOnSpawn">false</bool>
-								<Ref name="RootLocalizationTable">null</Ref>
+								<string name="Name">CharacterToSpectate</string>
 								<int64 name="SourceAssetId">-1</int64>
 								<BinaryString name="Tags"></BinaryString>
-								<token name="ZIndexBehavior">1</token>
+								<Ref name="Value">null</Ref>
 							</Properties>
-							<Item class="TextLabel" referent="RBXF5C4155C041F47A49FCE933DABBDA1D9">
-								<Properties>
-									<bool name="Active">false</bool>
-									<Vector2 name="AnchorPoint">
-										<X>0</X>
-										<Y>0</Y>
-									</Vector2>
-									<BinaryString name="AttributesSerialize"></BinaryString>
-									<bool name="AutoLocalize">true</bool>
-									<token name="AutomaticSize">0</token>
-									<Color3 name="BackgroundColor3">
-										<R>0</R>
-										<G>0</G>
-										<B>0</B>
-									</Color3>
-									<float name="BackgroundTransparency">0.600000024</float>
-									<Color3 name="BorderColor3">
-										<R>0.105882362</R>
-										<G>0.164705887</G>
-										<B>0.207843155</B>
-									</Color3>
-									<token name="BorderMode">0</token>
-									<int name="BorderSizePixel">1</int>
-									<bool name="ClipsDescendants">false</bool>
-									<bool name="Draggable">false</bool>
-									<token name="Font">10</token>
-									<Font name="FontFace"></Font>
-									<int name="LayoutOrder">0</int>
-									<float name="LineHeight">0.899999976</float>
-									<int name="MaxVisibleGraphemes">-1</int>
-									<string name="Name">Message</string>
-									<Ref name="NextSelectionDown">null</Ref>
-									<Ref name="NextSelectionLeft">null</Ref>
-									<Ref name="NextSelectionRight">null</Ref>
-									<Ref name="NextSelectionUp">null</Ref>
-									<UDim2 name="Position">
-										<XS>0</XS>
-										<XO>0</XO>
-										<YS>0</YS>
-										<YO>0</YO>
-									</UDim2>
-									<bool name="RichText">false</bool>
-									<Ref name="RootLocalizationTable">null</Ref>
-									<float name="Rotation">0</float>
-									<bool name="Selectable">false</bool>
-									<Ref name="SelectionImageObject">null</Ref>
-									<UDim2 name="Size">
-										<XS>1</XS>
-										<XO>0</XO>
-										<YS>1</YS>
-										<YO>0</YO>
-									</UDim2>
-									<token name="SizeConstraint">0</token>
-									<int64 name="SourceAssetId">-1</int64>
-									<BinaryString name="Tags"></BinaryString>
-									<string name="Text">Label</string>
-									<Color3 name="TextColor3">
-										<R>1</R>
-										<G>1</G>
-										<B>1</B>
-									</Color3>
-									<bool name="TextScaled">false</bool>
-									<float name="TextSize">25</float>
-									<Color3 name="TextStrokeColor3">
-										<R>0</R>
-										<G>0</G>
-										<B>0</B>
-									</Color3>
-									<float name="TextStrokeTransparency">1</float>
-									<float name="TextTransparency">0</float>
-									<token name="TextTruncate">0</token>
-									<bool name="TextWrapped">true</bool>
-									<token name="TextXAlignment">2</token>
-									<token name="TextYAlignment">1</token>
-									<bool name="Visible">true</bool>
-									<int name="ZIndex">1</int>
-								</Properties>
-								<Item class="UIStroke" referent="RBX73398C3E886C427EBE4BEF9B0106854D">
-									<Properties>
-										<token name="ApplyStrokeMode">0</token>
-										<BinaryString name="AttributesSerialize"></BinaryString>
-										<Color3 name="Color">
-											<R>0.423529446</R>
-											<G>0.423529446</G>
-											<B>0.423529446</B>
-										</Color3>
-										<bool name="Enabled">true</bool>
-										<token name="LineJoinMode">0</token>
-										<string name="Name">UIStroke</string>
-										<int64 name="SourceAssetId">-1</int64>
-										<BinaryString name="Tags"></BinaryString>
-										<float name="Thickness">1</float>
-										<float name="Transparency">0</float>
-									</Properties>
-								</Item>
-							</Item>
-							<Item class="TextLabel" referent="RBXED859C640D724705A1EF3117156DB22D">
-								<Properties>
-									<bool name="Active">false</bool>
-									<Vector2 name="AnchorPoint">
-										<X>0</X>
-										<Y>0</Y>
-									</Vector2>
-									<BinaryString name="AttributesSerialize"></BinaryString>
-									<bool name="AutoLocalize">true</bool>
-									<token name="AutomaticSize">0</token>
-									<Color3 name="BackgroundColor3">
-										<R>0</R>
-										<G>0</G>
-										<B>0</B>
-									</Color3>
-									<float name="BackgroundTransparency">1</float>
-									<Color3 name="BorderColor3">
-										<R>0.105882362</R>
-										<G>0.164705887</G>
-										<B>0.207843155</B>
-									</Color3>
-									<token name="BorderMode">0</token>
-									<int name="BorderSizePixel">1</int>
-									<bool name="ClipsDescendants">false</bool>
-									<bool name="Draggable">false</bool>
-									<token name="Font">10</token>
-									<Font name="FontFace"></Font>
-									<int name="LayoutOrder">0</int>
-									<float name="LineHeight">0.899999976</float>
-									<int name="MaxVisibleGraphemes">-1</int>
-									<string name="Name">Title</string>
-									<Ref name="NextSelectionDown">null</Ref>
-									<Ref name="NextSelectionLeft">null</Ref>
-									<Ref name="NextSelectionRight">null</Ref>
-									<Ref name="NextSelectionUp">null</Ref>
-									<UDim2 name="Position">
-										<XS>0</XS>
-										<XO>0</XO>
-										<YS>0</YS>
-										<YO>0</YO>
-									</UDim2>
-									<bool name="RichText">false</bool>
-									<Ref name="RootLocalizationTable">null</Ref>
-									<float name="Rotation">0</float>
-									<bool name="Selectable">false</bool>
-									<Ref name="SelectionImageObject">null</Ref>
-									<UDim2 name="Size">
-										<XS>1</XS>
-										<XO>0</XO>
-										<YS>0.349999994</YS>
-										<YO>0</YO>
-									</UDim2>
-									<token name="SizeConstraint">0</token>
-									<int64 name="SourceAssetId">-1</int64>
-									<BinaryString name="Tags"></BinaryString>
-									<string name="Text">Message from LeBoogle</string>
-									<Color3 name="TextColor3">
-										<R>1</R>
-										<G>1</G>
-										<B>1</B>
-									</Color3>
-									<bool name="TextScaled">false</bool>
-									<float name="TextSize">28</float>
-									<Color3 name="TextStrokeColor3">
-										<R>0</R>
-										<G>0</G>
-										<B>0</B>
-									</Color3>
-									<float name="TextStrokeTransparency">1</float>
-									<float name="TextTransparency">0</float>
-									<token name="TextTruncate">0</token>
-									<bool name="TextWrapped">true</bool>
-									<token name="TextXAlignment">2</token>
-									<token name="TextYAlignment">2</token>
-									<bool name="Visible">true</bool>
-									<int name="ZIndex">1</int>
-								</Properties>
-								<Item class="UIStroke" referent="RBX5F48AC7F1C764F66BAD51DFB3D48F1C0">
-									<Properties>
-										<token name="ApplyStrokeMode">0</token>
-										<BinaryString name="AttributesSerialize"></BinaryString>
-										<Color3 name="Color">
-											<R>0.423529446</R>
-											<G>0.423529446</G>
-											<B>0.423529446</B>
-										</Color3>
-										<bool name="Enabled">true</bool>
-										<token name="LineJoinMode">0</token>
-										<string name="Name">UIStroke</string>
-										<int64 name="SourceAssetId">-1</int64>
-										<BinaryString name="Tags"></BinaryString>
-										<float name="Thickness">1</float>
-										<float name="Transparency">0</float>
-									</Properties>
-								</Item>
-							</Item>
 						</Item>
-					</Item>
-				</Item>
-				<Item class="Folder" referent="RBXA4DD5296752B4A08A2454989FA5ACC0A">
-					<Properties>
-						<BinaryString name="AttributesSerialize"></BinaryString>
-						<string name="Name">Misc</string>
-						<int64 name="SourceAssetId">-1</int64>
-						<BinaryString name="Tags"></BinaryString>
-					</Properties>
-					<Item class="ModuleScript" referent="RBX0230339937084DC9B2DDFA73A2134B3D">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">cmds</string>
-							<string name="ScriptGuid">{F8432CD3-DDAC-42E6-A55E-5BB438400EDB}</string>
-							<ProtectedString name="Source"><![CDATA[function getAccessRank(ID)
-	for K, v in pairs(shared["__BoogleAdmin"].Config.Permissions) do
-		if table.find(v,ID) then
-			return K
-		end
-	end
-	return -1
-end
-
-return {
-	Name = script.Name,
-	OtherNames = {'help','commands'},
-	Arguments = {},
-	PermLevel =shared["__BoogleAdmin"].VIPRank,
-	Function = function(Context, Arguments)
-		shared["__BoogleAdmin"].Remotes.TextMessage:FireClient(game.Players:GetPlayerByUserId(Context.Invoker),'Boogle Admin | CMDS-', shared["__BoogleAdmin"].HelpList[getAccessRank(Context.Invoker)])
-		
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXEDA8D9725ED0438D8C3DFD21F6BB9AD6">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">refresh</string>
-							<string name="ScriptGuid">{2BEEF5D9-255C-460C-A451-D28597628ADE}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		
-		local Player:Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		local OldCFrame = Character:GetPrimaryPartCFrame()
-		
-		Player:LoadCharacter()
-		Player.Character:SetPrimaryPartCFrame(OldCFrame)
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX8558429B36F142D0940E5F5E6E1E24AA">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">reset</string>
-							<string name="ScriptGuid">{92A8EB1A-2A2D-4868-BAC1-1B63C141CDEA}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		
-		local Player:Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		Player:LoadCharacter()
-		
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX971F6872DF1E4824A5178F20B648E563">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">heal</string>
-							<string name="ScriptGuid">{5108B697-ACBC-408E-8D87-000884EFF3BF}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		Character.Humanoid.Health = Character.Humanoid.MaxHealth
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXB627579036314BE29CA6222560C8CADE">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">health</string>
-							<string name="ScriptGuid">{119AC418-7E49-4832-AD36-BB14917F8442}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player', 'Amount'},
-	OtherNames = {'sethealth','hp'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		Character.Humanoid.MaxHealth = Arguments[2]
-		Character.Humanoid.Health = Character.Humanoid.MaxHealth
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX51B1641E84454D5D97268E0B05C604CD">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">time</string>
-							<string name="ScriptGuid">{947FCB5A-4DF4-49FF-BD71-69E2A7E0FCEA}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Number'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		game.Lighting.ClockTime = Arguments[1]
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXA7E6E5212C484596BB1E91AB93B3F89D">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">sit</string>
-							<string name="ScriptGuid">{C2742D32-2560-45CA-8679-7D2775A21EDB}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].VIPRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		Character.Humanoid.Sit = true
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXDAE6D0A5E771440389DABF0BBF57A260">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">size</string>
-							<string name="ScriptGuid">{9F0B7D52-4C2D-472A-A88A-16B545D38D6B}</string>
-							<ProtectedString name="Source"><![CDATA[local SizedCharacters = {}
-return {
-	Name = script.Name,
-	Arguments = {'Player', 'Size'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(_, args: {}) -- Stolen from Adonis cuz im lazy
-		local plr = args[1][1]
-		local sizeLimit = 20
-		local num = math.clamp(tonumber(args[2]) or 1, 0.001, sizeLimit) -- Size limit exceeding over 20 would be unnecessary and may potientially create massive lag !!
-
-		if not args[2] or not tonumber(args[2]) then
-			num = 1
-		end
-
-		for _, v in pairs(game.Players:GetPlayers(plr)) do
-			if v ~= plr then continue end
-			local char = v.Character
-			local human = char and char:FindFirstChildOfClass("Humanoid")
-
-			if not human then
-				
-				continue
-			end
-
-			if not SizedCharacters[char] then
-				SizedCharacters[char] = num
-			elseif SizedCharacters[char] and SizedCharacters[char]*num < sizeLimit then
-				SizedCharacters[char] = SizedCharacters[char]*num
-			else
-				continue
-			end
-
-			if human and human.RigType == Enum.HumanoidRigType.R15 then
-				for _, val in pairs(human:GetChildren()) do
-					if val:IsA("NumberValue") and val.Name:match(".*Scale") then
-						val.Value *= num
-					end
-				end
-			elseif human and human.RigType == Enum.HumanoidRigType.R6 then
-				local motors = {}
-				table.insert(motors, char.HumanoidRootPart:FindFirstChild("RootJoint"))
-				for _, motor in pairs(char.Torso:GetChildren()) do
-					if motor:IsA("Motor6D") then table.insert(motors, motor) end
-				end
-				for _, motor in pairs(motors) do
-					motor.C0 = CFrame.new((motor.C0.Position * num)) * (motor.C0 - motor.C0.Position)
-					motor.C1 = CFrame.new((motor.C1.Position * num)) * (motor.C1 - motor.C1.Position)
-				end
-
-				for _, v in ipairs(char:GetDescendants()) do
-					if v:IsA("BasePart") then
-						v.Size *= num
-					elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
-						local handle = v.Handle
-						handle.AccessoryWeld.C0 = CFrame.new((handle.AccessoryWeld.C0.Position * num)) * (handle.AccessoryWeld.C0 - handle.AccessoryWeld.C0.Position)
-						handle.AccessoryWeld.C1 = CFrame.new((handle.AccessoryWeld.C1.Position * num)) * (handle.AccessoryWeld.C1 - handle.AccessoryWeld.C1.Position)
-						local mesh = handle:FindFirstChildOfClass("SpecialMesh")
-						if mesh then
-							mesh.Scale *= num
-						end
-					elseif v:IsA("SpecialMesh") and v.Parent.Name ~= "Handle" and v.Parent.Name ~= "Head" then
-						v.Scale *= num
-					end
-				end
-			end
-		end
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX215838F3A4BA47018F52EC6EDAE56078">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">jump</string>
-							<string name="ScriptGuid">{697B83EA-1495-4D4C-8FD4-5FC8D4A86C6E}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		Character.Humanoid.Jump = true
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXE0697A9DFFD444529731F748A86A06E6">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">char</string>
-							<string name="ScriptGuid">{43EF2E18-B6A9-4B20-991C-DD53AEEF3F5B}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player', 'User ID'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player:Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		local OldCFrame = Character:GetPrimaryPartCFrame()
-		
-		Player.CharacterAppearanceId = Arguments[2]
-		Player:LoadCharacter()
-		Player.Character:SetPrimaryPartCFrame(OldCFrame)
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXDE50074A1135467CA2C85A254202038E">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">unchar</string>
-							<string name="ScriptGuid">{3135C881-CF7D-4B1D-BA17-93676C5094E6}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player:Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		local OldCFrame = Character:GetPrimaryPartCFrame()
-		
-		Player.CharacterAppearanceId = Player.UserId
-		Player:LoadCharacter()
-		Player.Character:SetPrimaryPartCFrame(OldCFrame)
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX83B6E72AAF254360AD0CBE689B7E465D">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">r6</string>
-							<string name="ScriptGuid">{E754B24C-B780-4818-A262-EF718C231B24}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		-- also from adonis  https://github.com/Sceleratis/Adonis/blob/7782a751c42b7731f38ac723af29ed75ce2e4842/MainModule/Server/Core/Functions.lua#L1216-L1247
-		local plr = Arguments[1][1]
-		
-		local rigType = Enum.HumanoidRigType.R6
-
-		local Humanoid: Humanoid = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
-
-		local HumanoidDescription = Humanoid:GetAppliedDescription() or game.Players:GetHumanoidDescriptionFromUserId(plr.UserId)
-		local newCharacterModel: Model = game.Players:CreateHumanoidModelFromDescription(HumanoidDescription, rigType)
-		local Animate: BaseScript = newCharacterModel.Animate
-
-		newCharacterModel.Humanoid.DisplayName = Humanoid.DisplayName
-		newCharacterModel.Name = plr.Name
-
-		local oldCFrame = plr.Character and plr.Character:GetPivot() or CFrame.new()
-
-		if plr.Character then
-			plr.Character:Destroy()
-			plr.Character = nil
-		end
-		plr.Character = newCharacterModel
-
-		newCharacterModel:PivotTo(oldCFrame)
-		newCharacterModel.Parent = workspace
-
-		-- hacky way to fix other people being unable to see animations.
-		for _=1,2 do
-			if Animate then
-				Animate.Disabled = not Animate.Disabled
-			end
-		end
-
-		return newCharacterModel
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX680C5FB43460484A90B7B6B66909865A">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">r15</string>
-							<string name="ScriptGuid">{87C006E6-49FE-4CC7-B85E-076F0BD34822}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		-- also from adonis  https://github.com/Sceleratis/Adonis/blob/7782a751c42b7731f38ac723af29ed75ce2e4842/MainModule/Server/Core/Functions.lua#L1216-L1247
-		local plr = Arguments[1][1]
-
-		local rigType = Enum.HumanoidRigType.R15
-
-		local Humanoid: Humanoid = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
-
-		local HumanoidDescription = Humanoid:GetAppliedDescription() or game.Players:GetHumanoidDescriptionFromUserId(plr.UserId)
-		local newCharacterModel: Model = game.Players:CreateHumanoidModelFromDescription(HumanoidDescription, rigType)
-		local Animate: BaseScript = newCharacterModel.Animate
-
-		newCharacterModel.Humanoid.DisplayName = Humanoid.DisplayName
-		newCharacterModel.Name = plr.Name
-
-		local oldCFrame = plr.Character and plr.Character:GetPivot() or CFrame.new()
-
-		if plr.Character then
-			plr.Character:Destroy()
-			plr.Character = nil
-		end
-		plr.Character = newCharacterModel
-
-		newCharacterModel:PivotTo(oldCFrame)
-		newCharacterModel.Parent = workspace
-
-		-- hacky way to fix other people being unable to see animations.
-		for _=1,2 do
-			if Animate then
-				Animate.Disabled = not Animate.Disabled
-			end
-		end
-
-		return newCharacterModel
-
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX119769CADD854A58B322DDA5FD8A5D6D">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">speed</string>
-							<string name="ScriptGuid">{5AEE6C53-33BA-4A99-A6D9-B7BDAEFEB27C}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player', 'Number'},
-	OtherNames = {'spd','walkspeed'},
-	PermLevel = shared["__BoogleAdmin"].ModRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		Character.Humanoid.WalkSpeed = Arguments[2]
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-				</Item>
-				<Item class="Folder" referent="RBX502D016541754D53B3490BEC3F41EE2F">
-					<Properties>
-						<BinaryString name="AttributesSerialize"></BinaryString>
-						<string name="Name">Deadly</string>
-						<int64 name="SourceAssetId">-1</int64>
-						<BinaryString name="Tags"></BinaryString>
-					</Properties>
-					<Item class="ModuleScript" referent="RBXDD152E76F13B49B5BBDBB90AFD19165F">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">damage</string>
-							<string name="ScriptGuid">{2F2BB8DC-D553-4327-AC69-0EFC41C25B8D}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player', 'Amount'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		Character.Humanoid:TakeDamage(Arguments[2])
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX097977F08CD840D1A12A2C4FF738BDDC">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">kill</string>
-							<string name="ScriptGuid">{EE378348-14AA-40A2-807D-FC35F96F0C2D}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		Character.Humanoid.Health = 0
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX58DF8418F1F34191867244E0DD4631BB">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">explode</string>
-							<string name="ScriptGuid">{F72E6228-1227-4AB6-A893-22DD0B3959EB}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player', 'Radius'},
-	PermLevel = shared["__BoogleAdmin"].HeadAdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		
-		local explosion = Instance.new('Explosion')
-		explosion.ExplosionType = Enum.ExplosionType.NoCraters
-		explosion.BlastRadius = Arguments[2] or 25
-		explosion.BlastPressure = 100000
-		explosion.DestroyJointRadiusPercent = 0
-		local Hit = {}
-		explosion.Hit:Connect(function(P,D)
-			if P.Parent:FindFirstChild('Humanoid') and not Hit[P.Parent] then
-				Hit[P.Parent] = true
-				
-				P.Parent.Humanoid:TakeDamage(((25-D) / 25) * 150)
-			end
-		end)
-		
-		explosion.Position = Character.PrimaryPart.Position
-		explosion.Parent = workspace
-		game.Debris:AddItem(explosion,3)
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX29EEB0ACA1C84EC1B8299DE64CA6C5B1">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">smite</string>
-							<string name="ScriptGuid">{EA3925F2-84AB-4D9C-9F19-598431FB28A3}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel = shared["__BoogleAdmin"].HeadAdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		local Character = Player.Character
-		if not Player then return end
-		
-		local Model = script.SmiteModel:Clone()
-		game.Debris:AddItem(Model,10)
-		
-		Model.Parent = workspace
-		Model:SetPrimaryPartCFrame(Character:GetPrimaryPartCFrame())
-		Model.PrimaryPart.Rumble:Play()
-		wait(2.6)
-		
-		Model.PrimaryPart.Zap:Play()
-		wait(.7)
-		Model.PrimaryPart.Rumble:Stop()
-		
-		local Bolt = script.Bolt:Clone()
-		Bolt.Parent = Model
-		Bolt.CFrame = CFrame.new(Model.Root.Position + Vector3.new(0,15,0),Character.PrimaryPart.Position)
-		
-		game:GetService('TweenService'):Create(Bolt,TweenInfo.new(0.25,Enum.EasingStyle.Linear,Enum.EasingDirection.InOut), {Position = Character.PrimaryPart.Position}):Play()
-		wait(.25)
-		Bolt:Destroy()
-		
-		Character.Humanoid.Health = 0
-
-		for _, v in pairs(Character:GetChildren()) do
-			if v:IsA("BasePart") then
-				local s = Instance.new('Smoke', v)
-				s.Size = .05
-				s.TimeScale = 0.25
-				
-				s.RiseVelocity = 2
-			end
-		end
-		
-		
-		wait(3)
-		Model:Destroy()
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-						<Item class="Model" referent="RBX63329A4041EF410FB63EC99E6E18F7DF">
-							<Properties>
-								<BinaryString name="AttributesSerialize"></BinaryString>
-								<token name="LevelOfDetail">0</token>
-								<CoordinateFrame name="ModelMeshCFrame">
-									<X>0</X>
-									<Y>0</Y>
-									<Z>0</Z>
-									<R00>1</R00>
-									<R01>0</R01>
-									<R02>0</R02>
-									<R10>0</R10>
-									<R11>1</R11>
-									<R12>0</R12>
-									<R20>0</R20>
-									<R21>0</R21>
-									<R22>1</R22>
-								</CoordinateFrame>
-								<SharedString name="ModelMeshData">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
-								<Vector3 name="ModelMeshSize">
-									<X>0</X>
-									<Y>0</Y>
-									<Z>0</Z>
-								</Vector3>
-								<string name="Name">SmiteModel</string>
-								<bool name="NeedsPivotMigration">false</bool>
-								<Ref name="PrimaryPart">RBX330F0CE8AE3846E38EEB4E09D6E76054</Ref>
-								<int64 name="SourceAssetId">-1</int64>
-								<BinaryString name="Tags"></BinaryString>
-								<OptionalCoordinateFrame name="WorldPivotData">
-									<CFrame>
-										<X>-86.7304688</X>
-										<Y>0.5</Y>
-										<Z>33.1247559</Z>
-										<R00>1</R00>
-										<R01>0</R01>
-										<R02>0</R02>
-										<R10>0</R10>
-										<R11>1</R11>
-										<R12>0</R12>
-										<R20>0</R20>
-										<R21>0</R21>
-										<R22>1</R22>
-									</CFrame>
-								</OptionalCoordinateFrame>
-							</Properties>
-							<Item class="MeshPart" referent="RBX9328A8D7072D430187FC84816F8983DD">
-								<Properties>
-									<bool name="Anchored">true</bool>
-									<BinaryString name="AttributesSerialize"></BinaryString>
-									<float name="BackParamA">-0.5</float>
-									<float name="BackParamB">0.5</float>
-									<token name="BackSurface">0</token>
-									<token name="BackSurfaceInput">0</token>
-									<float name="BottomParamA">-0.5</float>
-									<float name="BottomParamB">0.5</float>
-									<token name="BottomSurface">0</token>
-									<token name="BottomSurfaceInput">0</token>
-									<CoordinateFrame name="CFrame">
-										<X>-86.7304688</X>
-										<Y>23.8804054</Y>
-										<Z>33.1247559</Z>
-										<R00>1</R00>
-										<R01>0</R01>
-										<R02>0</R02>
-										<R10>0</R10>
-										<R11>1</R11>
-										<R12>0</R12>
-										<R20>0</R20>
-										<R21>0</R21>
-										<R22>1</R22>
-									</CoordinateFrame>
-									<bool name="CanCollide">false</bool>
-									<bool name="CanQuery">true</bool>
-									<bool name="CanTouch">true</bool>
-									<bool name="CastShadow">true</bool>
-									<int name="CollisionGroupId">0</int>
-									<Color3uint8 name="Color3uint8">4279308561</Color3uint8>
-									<PhysicalProperties name="CustomPhysicalProperties">
-										<CustomPhysics>false</CustomPhysics>
-									</PhysicalProperties>
-									<bool name="DoubleSided">true</bool>
-									<float name="FrontParamA">-0.5</float>
-									<float name="FrontParamB">0.5</float>
-									<token name="FrontSurface">0</token>
-									<token name="FrontSurfaceInput">0</token>
-									<bool name="HasJointOffset">false</bool>
-									<bool name="HasSkinnedMesh">false</bool>
-									<Vector3 name="InitialSize">
-										<X>1.34701109</X>
-										<Y>1.024441</Y>
-										<Z>1.70995808</Z>
-									</Vector3>
-									<Vector3 name="JointOffset">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>0</Z>
-									</Vector3>
-									<BinaryString name="LODData"></BinaryString>
-									<float name="LeftParamA">-0.5</float>
-									<float name="LeftParamB">0.5</float>
-									<token name="LeftSurface">0</token>
-									<token name="LeftSurfaceInput">0</token>
-									<bool name="Locked">false</bool>
-									<bool name="Massless">false</bool>
-									<token name="Material">288</token>
-									<string name="MaterialVariantSerialized"></string>
-									<Content name="MeshID"><url>rbxassetid://7326248280</url></Content>
-									<Content name="MeshId"><url>rbxassetid://7326248280</url></Content>
-									<string name="Name">Cloud</string>
-									<SharedString name="PhysicalConfigData">+qv2o0HSW+htH+ALwYQpiw==</SharedString>
-									<BinaryString name="PhysicsData"></BinaryString>
-									<CoordinateFrame name="PivotOffset">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>0</Z>
-										<R00>1</R00>
-										<R01>0</R01>
-										<R02>0</R02>
-										<R10>0</R10>
-										<R11>1</R11>
-										<R12>0</R12>
-										<R20>0</R20>
-										<R21>0</R21>
-										<R22>1</R22>
-									</CoordinateFrame>
-									<float name="Reflectance">0</float>
-									<token name="RenderFidelity">0</token>
-									<float name="RightParamA">-0.5</float>
-									<float name="RightParamB">0.5</float>
-									<token name="RightSurface">0</token>
-									<token name="RightSurfaceInput">0</token>
-									<int name="RootPriority">0</int>
-									<Vector3 name="RotVelocity">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>0</Z>
-									</Vector3>
-									<int64 name="SourceAssetId">7326248362</int64>
-									<BinaryString name="Tags"></BinaryString>
-									<Content name="TextureID"><null></null></Content>
-									<float name="TopParamA">-0.5</float>
-									<float name="TopParamB">0.5</float>
-									<token name="TopSurface">0</token>
-									<token name="TopSurfaceInput">0</token>
-									<float name="Transparency">0</float>
-									<Vector3 name="Velocity">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>0</Z>
-									</Vector3>
-									<Vector3 name="size">
-										<X>19.8772545</X>
-										<Y>15.1154461</Y>
-										<Z>25.2331028</Z>
-									</Vector3>
-								</Properties>
-							</Item>
-							<Item class="Part" referent="RBX330F0CE8AE3846E38EEB4E09D6E76054">
-								<Properties>
-									<bool name="Anchored">true</bool>
-									<BinaryString name="AttributesSerialize"></BinaryString>
-									<float name="BackParamA">-0.5</float>
-									<float name="BackParamB">0.5</float>
-									<token name="BackSurface">0</token>
-									<token name="BackSurfaceInput">0</token>
-									<float name="BottomParamA">-0.5</float>
-									<float name="BottomParamB">0.5</float>
-									<token name="BottomSurface">0</token>
-									<token name="BottomSurfaceInput">0</token>
-									<CoordinateFrame name="CFrame">
-										<X>-86.7304688</X>
-										<Y>0.5</Y>
-										<Z>33.1247559</Z>
-										<R00>1</R00>
-										<R01>0</R01>
-										<R02>0</R02>
-										<R10>0</R10>
-										<R11>1</R11>
-										<R12>0</R12>
-										<R20>0</R20>
-										<R21>0</R21>
-										<R22>1</R22>
-									</CoordinateFrame>
-									<bool name="CanCollide">false</bool>
-									<bool name="CanQuery">true</bool>
-									<bool name="CanTouch">true</bool>
-									<bool name="CastShadow">true</bool>
-									<int name="CollisionGroupId">0</int>
-									<Color3uint8 name="Color3uint8">4284702562</Color3uint8>
-									<PhysicalProperties name="CustomPhysicalProperties">
-										<CustomPhysics>false</CustomPhysics>
-									</PhysicalProperties>
-									<float name="FrontParamA">-0.5</float>
-									<float name="FrontParamB">0.5</float>
-									<token name="FrontSurface">0</token>
-									<token name="FrontSurfaceInput">0</token>
-									<float name="LeftParamA">-0.5</float>
-									<float name="LeftParamB">0.5</float>
-									<token name="LeftSurface">0</token>
-									<token name="LeftSurfaceInput">0</token>
-									<bool name="Locked">false</bool>
-									<bool name="Massless">false</bool>
-									<token name="Material">272</token>
-									<string name="MaterialVariantSerialized"></string>
-									<string name="Name">Root</string>
-									<CoordinateFrame name="PivotOffset">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>0</Z>
-										<R00>1</R00>
-										<R01>0</R01>
-										<R02>0</R02>
-										<R10>0</R10>
-										<R11>1</R11>
-										<R12>0</R12>
-										<R20>0</R20>
-										<R21>0</R21>
-										<R22>1</R22>
-									</CoordinateFrame>
-									<float name="Reflectance">0</float>
-									<float name="RightParamA">-0.5</float>
-									<float name="RightParamB">0.5</float>
-									<token name="RightSurface">0</token>
-									<token name="RightSurfaceInput">0</token>
-									<int name="RootPriority">0</int>
-									<Vector3 name="RotVelocity">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>0</Z>
-									</Vector3>
-									<int64 name="SourceAssetId">-1</int64>
-									<BinaryString name="Tags"></BinaryString>
-									<float name="TopParamA">-0.5</float>
-									<float name="TopParamB">0.5</float>
-									<token name="TopSurface">0</token>
-									<token name="TopSurfaceInput">0</token>
-									<float name="Transparency">1</float>
-									<Vector3 name="Velocity">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>0</Z>
-									</Vector3>
-									<token name="formFactorRaw">1</token>
-									<token name="shape">1</token>
-									<Vector3 name="size">
-										<X>1</X>
-										<Y>1</Y>
-										<Z>1</Z>
-									</Vector3>
-								</Properties>
-								<Item class="Sound" referent="RBX4E50CF1DF6904C0F946B726DCC86EF3A">
-									<Properties>
-										<BinaryString name="AttributesSerialize"></BinaryString>
-										<float name="EmitterSize">100</float>
-										<bool name="Looped">false</bool>
-										<string name="Name">Rumble</string>
-										<bool name="PlayOnRemove">false</bool>
-										<float name="PlaybackSpeed">1</float>
-										<bool name="Playing">false</bool>
-										<token name="RollOffMode">0</token>
-										<Ref name="SoundGroup">null</Ref>
-										<Content name="SoundId"><url>rbxassetid://9120021237</url></Content>
-										<int64 name="SourceAssetId">9120021237</int64>
-										<BinaryString name="Tags"></BinaryString>
-										<double name="TimePosition">0</double>
-										<float name="Volume">1</float>
-										<float name="xmlRead_MaxDistance_3">10000</float>
-									</Properties>
-								</Item>
-								<Item class="Sound" referent="RBXCC9ABF5D978B45CF9E93D3253EB6E7F2">
-									<Properties>
-										<BinaryString name="AttributesSerialize"></BinaryString>
-										<float name="EmitterSize">100</float>
-										<bool name="Looped">false</bool>
-										<string name="Name">Zap</string>
-										<bool name="PlayOnRemove">false</bool>
-										<float name="PlaybackSpeed">1</float>
-										<bool name="Playing">false</bool>
-										<token name="RollOffMode">0</token>
-										<Ref name="SoundGroup">null</Ref>
-										<Content name="SoundId"><url>rbxassetid://9120020523</url></Content>
-										<int64 name="SourceAssetId">9120020523</int64>
-										<BinaryString name="Tags"></BinaryString>
-										<double name="TimePosition">0</double>
-										<float name="Volume">2</float>
-										<float name="xmlRead_MaxDistance_3">10000</float>
-									</Properties>
-								</Item>
-							</Item>
-							<Item class="MeshPart" referent="RBX926FE2F573E243F988A0FEE8222490F4">
-								<Properties>
-									<bool name="Anchored">true</bool>
-									<BinaryString name="AttributesSerialize"></BinaryString>
-									<float name="BackParamA">-0.5</float>
-									<float name="BackParamB">0.5</float>
-									<token name="BackSurface">0</token>
-									<token name="BackSurfaceInput">0</token>
-									<float name="BottomParamA">-0.5</float>
-									<float name="BottomParamB">0.5</float>
-									<token name="BottomSurface">0</token>
-									<token name="BottomSurfaceInput">0</token>
-									<CoordinateFrame name="CFrame">
-										<X>-79.4632263</X>
-										<Y>23.8804054</Y>
-										<Z>33.1247559</Z>
-										<R00>-0.707106829</R00>
-										<R01>0</R01>
-										<R02>0.707106709</R02>
-										<R10>0</R10>
-										<R11>1</R11>
-										<R12>0</R12>
-										<R20>-0.707106709</R20>
-										<R21>0</R21>
-										<R22>-0.707106829</R22>
-									</CoordinateFrame>
-									<bool name="CanCollide">false</bool>
-									<bool name="CanQuery">true</bool>
-									<bool name="CanTouch">true</bool>
-									<bool name="CastShadow">true</bool>
-									<int name="CollisionGroupId">0</int>
-									<Color3uint8 name="Color3uint8">4279308561</Color3uint8>
-									<PhysicalProperties name="CustomPhysicalProperties">
-										<CustomPhysics>false</CustomPhysics>
-									</PhysicalProperties>
-									<bool name="DoubleSided">true</bool>
-									<float name="FrontParamA">-0.5</float>
-									<float name="FrontParamB">0.5</float>
-									<token name="FrontSurface">0</token>
-									<token name="FrontSurfaceInput">0</token>
-									<bool name="HasJointOffset">false</bool>
-									<bool name="HasSkinnedMesh">false</bool>
-									<Vector3 name="InitialSize">
-										<X>1.34701109</X>
-										<Y>1.024441</Y>
-										<Z>1.70995808</Z>
-									</Vector3>
-									<Vector3 name="JointOffset">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>0</Z>
-									</Vector3>
-									<BinaryString name="LODData"></BinaryString>
-									<float name="LeftParamA">-0.5</float>
-									<float name="LeftParamB">0.5</float>
-									<token name="LeftSurface">0</token>
-									<token name="LeftSurfaceInput">0</token>
-									<bool name="Locked">false</bool>
-									<bool name="Massless">false</bool>
-									<token name="Material">288</token>
-									<string name="MaterialVariantSerialized"></string>
-									<Content name="MeshID"><url>rbxassetid://7326248280</url></Content>
-									<Content name="MeshId"><url>rbxassetid://7326248280</url></Content>
-									<string name="Name">Cloud</string>
-									<SharedString name="PhysicalConfigData">+qv2o0HSW+htH+ALwYQpiw==</SharedString>
-									<BinaryString name="PhysicsData"></BinaryString>
-									<CoordinateFrame name="PivotOffset">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>0</Z>
-										<R00>1</R00>
-										<R01>0</R01>
-										<R02>0</R02>
-										<R10>0</R10>
-										<R11>1</R11>
-										<R12>0</R12>
-										<R20>0</R20>
-										<R21>0</R21>
-										<R22>1</R22>
-									</CoordinateFrame>
-									<float name="Reflectance">0</float>
-									<token name="RenderFidelity">0</token>
-									<float name="RightParamA">-0.5</float>
-									<float name="RightParamB">0.5</float>
-									<token name="RightSurface">0</token>
-									<token name="RightSurfaceInput">0</token>
-									<int name="RootPriority">0</int>
-									<Vector3 name="RotVelocity">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>0</Z>
-									</Vector3>
-									<int64 name="SourceAssetId">7326248362</int64>
-									<BinaryString name="Tags"></BinaryString>
-									<Content name="TextureID"><null></null></Content>
-									<float name="TopParamA">-0.5</float>
-									<float name="TopParamB">0.5</float>
-									<token name="TopSurface">0</token>
-									<token name="TopSurfaceInput">0</token>
-									<float name="Transparency">0</float>
-									<Vector3 name="Velocity">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>0</Z>
-									</Vector3>
-									<Vector3 name="size">
-										<X>19.8772545</X>
-										<Y>15.1154461</Y>
-										<Z>25.2331028</Z>
-									</Vector3>
-								</Properties>
-							</Item>
-						</Item>
-						<Item class="Part" referent="RBXE3D5E3E9923F4693AD3F85409E71786F">
-							<Properties>
-								<bool name="Anchored">true</bool>
-								<BinaryString name="AttributesSerialize"></BinaryString>
-								<float name="BackParamA">-0.5</float>
-								<float name="BackParamB">0.5</float>
-								<token name="BackSurface">0</token>
-								<token name="BackSurfaceInput">0</token>
-								<float name="BottomParamA">-0.5</float>
-								<float name="BottomParamB">0.5</float>
-								<token name="BottomSurface">0</token>
-								<token name="BottomSurfaceInput">0</token>
-								<CoordinateFrame name="CFrame">
-									<X>-16.3168945</X>
-									<Y>0.5</Y>
-									<Z>-9.52038574</Z>
-									<R00>1</R00>
-									<R01>0</R01>
-									<R02>0</R02>
-									<R10>0</R10>
-									<R11>1</R11>
-									<R12>0</R12>
-									<R20>0</R20>
-									<R21>0</R21>
-									<R22>1</R22>
-								</CoordinateFrame>
-								<bool name="CanCollide">false</bool>
-								<bool name="CanQuery">true</bool>
-								<bool name="CanTouch">true</bool>
-								<bool name="CastShadow">true</bool>
-								<int name="CollisionGroupId">0</int>
-								<Color3uint8 name="Color3uint8">4288914085</Color3uint8>
-								<PhysicalProperties name="CustomPhysicalProperties">
-									<CustomPhysics>false</CustomPhysics>
-								</PhysicalProperties>
-								<float name="FrontParamA">-0.5</float>
-								<float name="FrontParamB">0.5</float>
-								<token name="FrontSurface">0</token>
-								<token name="FrontSurfaceInput">0</token>
-								<float name="LeftParamA">-0.5</float>
-								<float name="LeftParamB">0.5</float>
-								<token name="LeftSurface">0</token>
-								<token name="LeftSurfaceInput">0</token>
-								<bool name="Locked">false</bool>
-								<bool name="Massless">false</bool>
-								<token name="Material">256</token>
-								<string name="MaterialVariantSerialized"></string>
-								<string name="Name">Bolt</string>
-								<CoordinateFrame name="PivotOffset">
-									<X>0</X>
-									<Y>0</Y>
-									<Z>0</Z>
-									<R00>1</R00>
-									<R01>0</R01>
-									<R02>0</R02>
-									<R10>0</R10>
-									<R11>1</R11>
-									<R12>0</R12>
-									<R20>0</R20>
-									<R21>0</R21>
-									<R22>1</R22>
-								</CoordinateFrame>
-								<float name="Reflectance">0</float>
-								<float name="RightParamA">-0.5</float>
-								<float name="RightParamB">0.5</float>
-								<token name="RightSurface">0</token>
-								<token name="RightSurfaceInput">0</token>
-								<int name="RootPriority">0</int>
-								<Vector3 name="RotVelocity">
-									<X>0</X>
-									<Y>0</Y>
-									<Z>0</Z>
-								</Vector3>
-								<int64 name="SourceAssetId">-1</int64>
-								<BinaryString name="Tags"></BinaryString>
-								<float name="TopParamA">-0.5</float>
-								<float name="TopParamB">0.5</float>
-								<token name="TopSurface">0</token>
-								<token name="TopSurfaceInput">0</token>
-								<float name="Transparency">1</float>
-								<Vector3 name="Velocity">
-									<X>0</X>
-									<Y>0</Y>
-									<Z>0</Z>
-								</Vector3>
-								<token name="formFactorRaw">1</token>
-								<token name="shape">1</token>
-								<Vector3 name="size">
-									<X>1</X>
-									<Y>1</Y>
-									<Z>10</Z>
-								</Vector3>
-							</Properties>
-							<Item class="Attachment" referent="RBX3EE4DEAC19924D45A6BB8C693D069E63">
-								<Properties>
-									<BinaryString name="AttributesSerialize"></BinaryString>
-									<CoordinateFrame name="CFrame">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>10</Z>
-										<R00>1</R00>
-										<R01>0</R01>
-										<R02>0</R02>
-										<R10>0</R10>
-										<R11>1</R11>
-										<R12>0</R12>
-										<R20>0</R20>
-										<R21>0</R21>
-										<R22>1</R22>
-									</CoordinateFrame>
-									<string name="Name">Attachment</string>
-									<int64 name="SourceAssetId">-1</int64>
-									<BinaryString name="Tags"></BinaryString>
-									<bool name="Visible">false</bool>
-								</Properties>
-							</Item>
-							<Item class="Beam" referent="RBXB1057EB9BC9448C0A6D2A7C7C85D4AFA">
-								<Properties>
-									<Ref name="Attachment0">RBX3EE4DEAC19924D45A6BB8C693D069E63</Ref>
-									<Ref name="Attachment1">RBX766E8E98444C4EF6AACCB78A1074B85A</Ref>
-									<BinaryString name="AttributesSerialize"></BinaryString>
-									<float name="Brightness">5</float>
-									<ColorSequence name="Color">0 1 1 1 0 1 1 1 1 0 </ColorSequence>
-									<float name="CurveSize0">0</float>
-									<float name="CurveSize1">0</float>
-									<bool name="Enabled">true</bool>
-									<bool name="FaceCamera">true</bool>
-									<float name="LightEmission">1</float>
-									<float name="LightInfluence">0</float>
-									<string name="Name">Beam</string>
-									<int name="Segments">10</int>
-									<int64 name="SourceAssetId">-1</int64>
-									<BinaryString name="Tags"></BinaryString>
-									<Content name="Texture"><url>rbxassetid://6024995614</url></Content>
-									<float name="TextureLength">20</float>
-									<token name="TextureMode">2</token>
-									<float name="TextureSpeed">19</float>
-									<NumberSequence name="Transparency">0 1 0 0.492331 0.390625 0 1 1 0 </NumberSequence>
-									<float name="Width0">15</float>
-									<float name="Width1">15</float>
-									<float name="ZOffset">0</float>
-								</Properties>
-							</Item>
-							<Item class="Attachment" referent="RBX766E8E98444C4EF6AACCB78A1074B85A">
-								<Properties>
-									<BinaryString name="AttributesSerialize"></BinaryString>
-									<CoordinateFrame name="CFrame">
-										<X>0</X>
-										<Y>0</Y>
-										<Z>-10</Z>
-										<R00>1</R00>
-										<R01>0</R01>
-										<R02>0</R02>
-										<R10>0</R10>
-										<R11>1</R11>
-										<R12>0</R12>
-										<R20>0</R20>
-										<R21>0</R21>
-										<R22>1</R22>
-									</CoordinateFrame>
-									<string name="Name">Attachment</string>
-									<int64 name="SourceAssetId">-1</int64>
-									<BinaryString name="Tags"></BinaryString>
-									<bool name="Visible">false</bool>
-								</Properties>
-							</Item>
-						</Item>
-					</Item>
-					<Item class="ModuleScript" referent="RBX5A2B6F69D9E947F09A031416B2F882D5">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">fling</string>
-							<string name="ScriptGuid">{E67F58EE-0770-4FCD-AD2D-12BCE7C10D65}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Character = Arguments[1][1].Character
-		if not Character then return end
-		local Direction = if math.random(1,2) == 1 then 1 else -1 
-		local Power = math.random(400,500)
-		
-		
-		Character.PrimaryPart:ApplyAngularImpulse(Vector3.new(Direction,Direction,Direction) * Power)
-		
-		local BV = Instance.new('BodyVelocity', Character.PrimaryPart)
-		BV.MaxForce = Vector3.new(math.huge,math.huge,math.huge) 
-		BV.Velocity = (Vector3.new(Direction,1,Direction) * Power)
-		game.Debris:AddItem(BV,1)
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBXA538E13DF29848C8981C040747043382">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">sword</string>
-							<string name="ScriptGuid">{7EC27EC3-1174-4A9C-8893-143A91EB086D}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	Arguments = {'Player'},
-	PermLevel =shared["__BoogleAdmin"].AdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		if not Player then return end
-		
-		if Player.Backpack:FindFirstChild("ClassicSword") then return end
-		
-		local Gear = script["ClassicSword"]:Clone()
-		Gear.Parent = Player.Backpack
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
-					</Item>
-					<Item class="ModuleScript" referent="RBX77C56FD92AAD4260BE9AC50D8CFA5132">
-						<Properties>
-							<BinaryString name="AttributesSerialize"></BinaryString>
-							<Content name="LinkedSource"><null></null></Content>
-							<string name="Name">lightsaber</string>
-							<string name="ScriptGuid">{12E99967-8F15-4A27-8274-F89AFCD389AF}</string>
-							<ProtectedString name="Source"><![CDATA[return {
-	Name = script.Name,
-	OtherNames = {'saber'},
-	Arguments = {'Player', 'Color', 'Lightsaber Type'},
-	PermLevel = shared["__BoogleAdmin"].HeadAdminRank,
-	Function = function(Context, Arguments)
-		
-		local Player = Arguments[1][1]
-		if not Player then return end
-		
-		
-		local Gear = script[Arguments[3] or 'default']:Clone()
-		
-		pcall(function()
-			Gear.Blade.Color = Arguments[2]
-			for _, L: Light in pairs(Gear.Blade:GetChildren()) do
-				if L:IsA('Light') then
-					L.Color = Arguments[2]
-				end
-			end
-			
-			Gear.SideBlade1.Color = Arguments[2]
-			Gear.SideBlade2.Color = Arguments[2]
-			
-		end)
-		
-		Gear.Parent = Player.Backpack
-		
-	end
-}]]></ProtectedString>
-							<int64 name="SourceAssetId">-1</int64>
-							<BinaryString name="Tags"></BinaryString>
-						</Properties>
 					</Item>
 				</Item>
 			</Item>
@@ -3345,7 +2657,7 @@ return {
 		<Item class="Script" referent="RBX4C07020DD4944357B1663865144AE23C">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
-				<bool name="Disabled">false</bool>
+				<bool name="Disabled">true</bool>
 				<Content name="LinkedSource"><null></null></Content>
 				<string name="Name">Main</string>
 				<string name="ScriptGuid">{74CCD6FC-BF5A-45B7-A165-3F54549DCF80}</string>
@@ -3496,7 +2808,7 @@ return Settings]]></ProtectedString>
 						<G>0.0941176564</G>
 						<B>0.0941176564</B>
 					</Color3>
-					<float name="BackgroundTransparency">0</float>
+					<float name="BackgroundTransparency">0.400000006</float>
 					<Color3 name="BorderColor3">
 						<R>0.105882362</R>
 						<G>0.164705887</G>
@@ -3673,10 +2985,13 @@ function notify(Title, Message)
 end
 
 function textMessage(Title, Message)
+	local size = workspace.CurrentCamera.ViewportSize / 2
+	GUI.TextBox.Position = UDim2.fromOffset(size.X,size.Y)
 	GUI.TextBox.Title.Text = ("<b>%s</b>"):format(Title)
 	GUI.TextBox.Scroll.Message.Text = Message
 	
 	GUI.TextBox.Visible = true
+	GUI.TextBox.Scroll.CanvasPosition = Vector2.new()
 	GUI.TextBox.Scroll.CanvasSize = UDim2.fromOffset(0,GUI.TextBox.Scroll.Message.TextBounds.Y)
 end
 
@@ -4435,8 +3750,8 @@ return DraggableObject]]></ProtectedString>
 				<Properties>
 					<bool name="Active">false</bool>
 					<Vector2 name="AnchorPoint">
-						<X>0</X>
-						<Y>0</Y>
+						<X>0.5</X>
+						<Y>0.5</Y>
 					</Vector2>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<bool name="AutoLocalize">true</bool>
@@ -4473,9 +3788,9 @@ return DraggableObject]]></ProtectedString>
 					<bool name="Selectable">false</bool>
 					<Ref name="SelectionImageObject">null</Ref>
 					<UDim2 name="Size">
-						<XS>0.302051753</XS>
+						<XS>0.300000012</XS>
 						<XO>0</XO>
-						<YS>0.601999998</YS>
+						<YS>0.800000012</YS>
 						<YO>0</YO>
 					</UDim2>
 					<token name="SizeConstraint">0</token>
@@ -4896,7 +4211,7 @@ return DraggableObject]]></ProtectedString>
 						<G>0.0941176564</G>
 						<B>0.0941176564</B>
 					</Color3>
-					<float name="BackgroundTransparency">0</float>
+					<float name="BackgroundTransparency">0.400000006</float>
 					<Color3 name="BorderColor3">
 						<R>0.105882362</R>
 						<G>0.164705887</G>
